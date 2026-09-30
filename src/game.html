@@ -3,11 +3,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
-  /* Layout: one full-bleed canvas for the world, a DOM layer for score and messages.
+  /* Layout: one full-bleed canvas for the world, a DOM layer for HUD, fuel and the pilots board.
      Single deliberate look: Chrome-Dino greys that fade into a night palette as you fly. */
   :root {
     --sky: #f7f7f5;
     --ink: #535353;
+    --warn: #d0503c;
     --pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
     color-scheme: light;
   }
@@ -48,26 +49,90 @@
     background: transparent; color: var(--ink);
     opacity: 0.7; cursor: pointer;
   }
-  #mute:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #mute:focus-visible, #panel button:focus-visible, #nameIn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #fuel {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+    left: calc(env(safe-area-inset-left, 0px) + 16px);
+    display: flex; align-items: center; gap: 8px;
+    font: clamp(7px, 2vw, 9px)/1 var(--pixel);
+    letter-spacing: 0.08em;
+    pointer-events: none;
+  }
+  #fuelBar { width: clamp(72px, 20vw, 140px); height: 12px; border: 2px solid var(--ink); padding: 1px; box-sizing: border-box; }
+  #fuelFill { height: 100%; width: 100%; background: var(--ink); transform-origin: left center; }
+  #fuel.low #fuelFill { background: var(--warn); }
+  #fuel.low #fuelLabel { color: var(--warn); }
+  #fuel.empty { animation: blink 0.4s steps(1) infinite; }
   #msg {
     position: fixed;
-    left: 50%; top: 36%;
+    left: 50%; top: 50%;
     transform: translate(-50%, -50%);
     width: min(calc(100vw - 32px), 560px);
-    display: grid; justify-items: center; gap: 18px;
+    max-height: calc(100dvh - 24px);
+    display: grid; justify-items: center; gap: 14px;
     text-align: center;
     pointer-events: none;
   }
   #msgTitle { font: clamp(14px, 4.4vw, 24px)/1.3 var(--pixel); letter-spacing: 0.22em; text-wrap: balance; }
   #msgSub { font: clamp(8px, 2.3vw, 11px)/1.9 var(--pixel); letter-spacing: 0.12em; opacity: 0.8; animation: pulse 1.2s steps(2) infinite; }
   #hint { font: clamp(7px, 2vw, 9px)/1.9 var(--pixel); letter-spacing: 0.08em; opacity: 0.55; max-width: 32ch; }
-  #retry { width: 40px; height: 36px; }
-  @media (orientation: portrait) { #msg { top: 24%; } }
+  @media (orientation: portrait) { #msg { top: 40%; } }
+
+  #panel {
+    pointer-events: auto;
+    width: min(100%, 360px);
+    box-sizing: border-box;
+    background: var(--sky);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 12px 14px;
+    display: grid; gap: 10px;
+    font: clamp(8px, 2.2vw, 10px)/1.6 var(--pixel);
+    letter-spacing: 0.05em;
+    text-align: left;
+  }
+  #boardHead { display: flex; justify-content: space-between; gap: 8px; opacity: 0.7; }
+  #boardList {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; gap: 2px;
+    max-height: max(80px, calc(100dvh - 300px));
+    overflow-y: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  #boardList li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 8px; padding: 3px 4px; }
+  #boardList li span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #boardList li.me { background: var(--ink); color: var(--sky); }
+  #boardList li.none { display: block; opacity: 0.6; }
+  #entry { display: grid; gap: 8px; }
+  #entry label { color: var(--warn); }
+  .row { display: flex; gap: 8px; }
+  #nameIn {
+    flex: 1; min-width: 0;
+    font: 16px/1 var(--pixel);
+    text-transform: uppercase;
+    padding: 8px;
+    border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--sky); color: var(--ink);
+    user-select: text; -webkit-user-select: text;
+  }
+  .px {
+    font: clamp(8px, 2.2vw, 10px)/1 var(--pixel);
+    padding: 10px 12px;
+    border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--ink); color: var(--sky);
+    cursor: pointer;
+  }
+  .px:disabled { opacity: 0.5; cursor: default; }
+  #saved { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .link { font: inherit; letter-spacing: inherit; background: none; border: 0; padding: 4px 0; color: var(--ink); text-decoration: underline; cursor: pointer; }
+  #boardNote { opacity: 0.7; }
+
   .blink { animation: blink 0.25s steps(1) 4; }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes pulse { 50% { opacity: 0.35; } }
   @media (prefers-reduced-motion: reduce) {
-    #msgSub, .blink { animation: none; }
+    #msgSub, .blink, #fuel.empty { animation: none; }
   }
 </style>
 
@@ -80,13 +145,22 @@
     <path id="cross" d="M17 9l5 6M22 9l-5 6" style="display:none"/>
   </svg>
 </button>
+<div id="fuel" hidden><span id="fuelLabel">FUEL</span><div id="fuelBar"><div id="fuelFill"></div></div></div>
 <div id="msg">
   <div id="msgTitle">SKYLINE GLIDE</div>
-  <div id="retry" hidden><svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
-    <rect x="1" y="1" width="38" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
-    <path d="M27 12a9 9 0 1 0 2 8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/>
-    <path d="M22 7l8 0 0 8z" fill="currentColor"/>
-  </svg></div>
+  <div id="panel">
+    <form id="entry" hidden>
+      <label for="nameIn" id="entryLabel">NEW BEST! ENTER YOUR NAME</label>
+      <div class="row">
+        <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" placeholder="ACE">
+        <button class="px" id="saveBtn" type="submit">SAVE</button>
+      </div>
+    </form>
+    <div id="saved" hidden><span id="savedText"></span><button class="link" id="editName" type="button">EDIT NAME</button></div>
+    <div id="boardHead"><span>TOP PILOTS</span><span id="boardScope">THIS DEVICE</span></div>
+    <ol id="boardList"></ol>
+    <div id="boardNote" hidden></div>
+  </div>
   <div id="msgSub">TAP TO FLY · HOLD TO CLIMB</div>
   <div id="hint" hidden>Turn your phone sideways to see further ahead</div>
 </div>
@@ -94,11 +168,18 @@
 <script>
 (() => {
   'use strict';
+
+  // Optional: a free Supabase project makes the board global when this file is hosted
+  // outside claude.ai (see README). Leave empty to use claude.ai's shared store or this device.
+  const SUPABASE_URL = '';
+  const SUPABASE_ANON_KEY = '';
+
   const $ = (id) => document.getElementById(id);
   const cv = $('game');
   const ctx = cv.getContext('2d');
   const scoreEl = $('score'), hiEl = $('hi'), msg = $('msg'), msgTitle = $('msgTitle'),
-        msgSub = $('msgSub'), retry = $('retry'), hint = $('hint'), muteBtn = $('mute');
+        msgSub = $('msgSub'), hint = $('hint'), muteBtn = $('mute'),
+        fuelEl = $('fuel'), fuelFill = $('fuelFill'), fuelLabel = $('fuelLabel');
 
   const TAU = Math.PI * 2;
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -119,9 +200,11 @@
 
   // ---------- palette (day ↔ night) ----------
   const DAY = { sky: '#f7f7f5', ink: '#535353', mid: '#9d9d9b', t0: '#efefed', t1: '#e6e6e4', t2: '#dddddb',
-                win: '#c4c4c2', lit: '#c4c4c2', cloud: '#ffffff', cloudLine: '#c9c9c7', body: '#ffffff', wing: '#dcdcda' };
+                win: '#c4c4c2', lit: '#c4c4c2', cloud: '#ffffff', cloudLine: '#c9c9c7', body: '#ffffff', wing: '#dcdcda',
+                steel: '#a7aeb6' };
   const NIGHT = { sky: '#1d2029', ink: '#d4d4d2', mid: '#7a7f8b', t0: '#2b2f38', t1: '#31353f', t2: '#262a32',
-                  win: '#3b404b', lit: '#f2d27a', cloud: '#3a3f4b', cloudLine: '#5a5f6b', body: '#ecebe7', wing: '#a9aab0' };
+                  win: '#3b404b', lit: '#f2d27a', cloud: '#3a3f4b', cloudLine: '#5a5f6b', body: '#ecebe7', wing: '#a9aab0',
+                  steel: '#8d949d' };
   const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const DAYc = {}, NIGHTc = {};
   for (const key in DAY) { DAYc[key] = hexRgb(DAY[key]); NIGHTc[key] = hexRgb(NIGHT[key]); }
@@ -138,9 +221,8 @@
     root.setProperty('--sky', P.sky);
     root.setProperty('--ink', P.ink);
   }
-  const SUN = '#f4c24a', SUN_LINE = '#dca12a', MOON = '#ebe6d2';
+  const SUN = '#f4c24a', SUN_LINE = '#dca12a', MOON = '#ebe6d2', FLAME = '#f39a2b', FLAME_CORE = '#ffe08a';
   const PLAYER_LIVERY = '#3d7cc0';
-  const LIVERIES = ['#d0503c', '#2e9a8a', '#e08a2c', '#7a5bb5', '#c23b6b'];
 
   // ---------- world sizing ----------
   let cssW, cssH, dpr, S, W, H, groundY, playH, k, portrait, px;
@@ -162,7 +244,8 @@
   // ---------- state ----------
   let state = 'ready', t = 0, elapsed = 0, speed = 0, dist = 0, score = 0, shownScore = -1;
   let hi = parseInt(store.get('skyline-glide-hi'), 10) || 0;
-  let lastMilestone = 0, nightMix = 0, nightTarget = 0, nextToggle = 700;
+  const DAY_CYCLE = 500;
+  let lastMilestone = 0, nightMix = 0, nightTarget = 0, nextToggle = DAY_CYCLE;
   let clusters = [], enemies = [], clouds = [], flocks = [], puffs = [], trail = [], stars = [];
   let spawnCursor = 0, enemyTimer = 0, flockTimer = 3, groundOff = 0, trailTimer = 0, overT = 0, lastHf = 0.35;
   const player = { y: 0, vy: 0, angle: 0 };
@@ -170,6 +253,10 @@
   let keyHeld = false;
   const holding = () => pointers.size > 0 || keyHeld;
   const baseSpeed = () => (portrait ? 150 : 175);
+
+  // Fuel: taps sip, holding burns; it refills while you're off the throttle.
+  const FUEL = { tap: 0.045, burn: 0.42, regen: 0.3, relight: 0.25 };
+  let fuel = 1, fuelOut = false, shownFuel = -1, shownFuelState = '';
 
   // ---------- towers ----------
   const SHAPES = ['block', 'stepped', 'spire', 'antenna', 'dome', 'slant', 'crown', 'block'];
@@ -211,7 +298,6 @@
     ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.strokeStyle = P.ink; ctx.fillStyle = fill;
 
-    // rooftop ornament, drawn first so the body's roof edge sits over it
     ctx.beginPath();
     let beacon = null;
     switch (tw.shape) {
@@ -234,12 +320,10 @@
       ctx.moveTo(cx - 4, y0 - oH * 1.1); ctx.lineTo(cx + 4, y0 - oH * 1.1); ctx.stroke();
     }
 
-    // body
     ctx.fillStyle = fill;
     ctx.beginPath(); ctx.rect(x, y0, w, hB); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x, y0 + 3.5); ctx.lineTo(x + w, y0 + 3.5); ctx.lineWidth = 0.8; ctx.stroke();
 
-    // windows: two passes (unlit, then lit at night)
     const night = nightMix > 0.02;
     for (let pass = 0; pass < (night ? 2 : 1); pass++) {
       ctx.fillStyle = pass ? P.lit : P.win;
@@ -276,7 +360,6 @@
         }
       }
     }
-    // entrance
     ctx.fillStyle = P.win;
     ctx.fillRect(cx - 4, groundY - 8, 8, 8);
     if (beacon && Math.sin(t * 5 + tw.seed) > 0) {
@@ -285,25 +368,26 @@
     }
   }
 
-  // ---------- planes ----------
-  // local coordinates: nose at +29, tail at -29, y down
-  const HIT = [[27, 1.5], [21, -4.5], [-18, -4.5], [-23, -15], [-27, -15], [-27, -5], [-26, -1], [-14, 4.5],
-               [-10, 10], [-6, 10], [2, 9.5], [10, 9.5], [18, 4.8]];
-  function planePoly(x, y, ang, flip, sc) {
-    const c = Math.cos(ang), s = Math.sin(ang);
-    return HIT.map(([lx, ly]) => {
-      const a = lx * flip * sc, b = ly * sc;
-      return [x + a * c - b * s, y + a * s + b * c];
-    });
+  // ---------- aircraft ----------
+  // Every model is drawn facing right in local units (y down); oncoming traffic is mirrored.
+  function navLights(tailX, tailY, tipX, tipY, seed) {
+    if (nightMix > 0.3 && Math.sin(t * 6 + seed) > 0.3) {
+      ctx.fillStyle = '#e0412f'; ctx.beginPath(); ctx.arc(tailX, tailY, 1.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#5ee08a'; ctx.beginPath(); ctx.arc(tipX, tipY, 1.2, 0, TAU); ctx.fill();
+    }
   }
-  function drawPlane(x, y, ang, flip, sc, liv) {
+  function propDisc(x, y, r, speed) {
     ctx.save();
-    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(flip * sc, sc);
-    ctx.lineWidth = 1.3 / sc; ctx.lineJoin = 'round'; ctx.strokeStyle = P.ink;
-    // tail fin
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = P.mid;
+    ctx.beginPath(); ctx.ellipse(x, y, 1.1, Math.abs(Math.sin(t * speed)) * r + 0.6, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill();
+  }
+
+  function drawJet(liv, seed) {
     ctx.fillStyle = liv;
     ctx.beginPath(); ctx.moveTo(-17, -4.5); ctx.lineTo(-24, -16.5); ctx.lineTo(-28.5, -16.5); ctx.lineTo(-27.5, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // fuselage
     ctx.fillStyle = P.body;
     ctx.beginPath();
     ctx.moveTo(-28, -5); ctx.lineTo(18, -5);
@@ -311,31 +395,150 @@
     ctx.bezierCurveTo(29, 4, 25, 5, 18, 5);
     ctx.lineTo(-14, 5); ctx.lineTo(-28, -1.5); ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // cheatline
     ctx.fillStyle = liv;
     ctx.beginPath(); ctx.moveTo(-20, 0.8); ctx.lineTo(26, 0.8); ctx.lineTo(27.5, 2.2); ctx.lineTo(-17, 2.2); ctx.closePath(); ctx.fill();
-    // cabin windows
     ctx.fillStyle = P.ink;
     for (let wx = -13; wx <= 15; wx += 3.1) ctx.fillRect(wx, -2.6, 1.5, 1.7);
-    // cockpit
     ctx.beginPath(); ctx.moveTo(21.5, -3.4); ctx.lineTo(25.5, -2.6); ctx.lineTo(27.2, -0.8); ctx.lineTo(22, -1); ctx.closePath(); ctx.fill();
-    // horizontal stabiliser
     ctx.fillStyle = P.body;
     ctx.beginPath(); ctx.moveTo(-19, -1.5); ctx.lineTo(-29.5, -5); ctx.lineTo(-30.5, -2.8); ctx.lineTo(-22, 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // wing
     ctx.fillStyle = P.wing;
     ctx.beginPath(); ctx.moveTo(6, 2.5); ctx.lineTo(-6, 11); ctx.lineTo(-10.5, 11); ctx.lineTo(-3, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // engine
     ctx.fillStyle = P.body;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(0.5, 6, 10.5, 4.4, 2); else ctx.rect(0.5, 6, 10.5, 4.4);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = P.ink; ctx.fillRect(9.8, 6.9, 1.2, 2.6);
-    // navigation lights after dusk
-    if (nightMix > 0.3 && Math.sin(t * 6 + x * 0.01) > 0.3) {
-      ctx.fillStyle = '#e0412f'; ctx.beginPath(); ctx.arc(-26.5, -16.5, 1.4, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#5ee08a'; ctx.beginPath(); ctx.arc(-9.5, 11, 1.2, 0, TAU); ctx.fill();
-    }
+    navLights(-26.5, -16.5, -9.5, 11, seed);
+  }
+
+  function drawBiplane(liv, seed) {
+    // landing gear
+    ctx.beginPath(); ctx.moveTo(4, 4); ctx.lineTo(2.5, 10); ctx.moveTo(8, 4); ctx.lineTo(3.5, 10); ctx.stroke();
+    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(3, 10.5, 2.2, 0, TAU); ctx.fill();
+    // lower wing
+    ctx.fillStyle = P.wing; ctx.beginPath(); ctx.rect(-6, 2.6, 16, 2.4); ctx.fill(); ctx.stroke();
+    // tail fin
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-14, -2.5); ctx.quadraticCurveTo(-18, -10.5, -21.5, -10.5); ctx.lineTo(-22, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // fuselage
+    ctx.beginPath();
+    ctx.moveTo(-22, -1.5); ctx.lineTo(8, -4.5);
+    ctx.quadraticCurveTo(13, -4.5, 14, -2); ctx.lineTo(14, 2.5);
+    ctx.quadraticCurveTo(13, 4.5, 8, 4.5); ctx.lineTo(-22, 1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // open cockpit and pilot
+    ctx.fillStyle = P.ink;
+    ctx.beginPath(); ctx.arc(-3, -4.8, 1.8, Math.PI, TAU); ctx.fill();
+    // stabiliser
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.moveTo(-16, -0.5); ctx.lineTo(-24, -2); ctx.lineTo(-24, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // struts and upper wing
+    ctx.beginPath(); ctx.moveTo(-3.5, -9.6); ctx.lineTo(-3.5, 2.6); ctx.moveTo(7.5, -9.6); ctx.lineTo(7.5, 2.6);
+    ctx.moveTo(2, -9.6); ctx.lineTo(4, -4.3); ctx.stroke();
+    ctx.fillStyle = P.wing; ctx.beginPath(); ctx.rect(-7, -12, 18, 2.4); ctx.fill(); ctx.stroke();
+    // cowling and propeller
+    ctx.fillStyle = P.body; ctx.beginPath(); ctx.rect(13.5, -3.5, 2.5, 7); ctx.fill(); ctx.stroke();
+    propDisc(17, 0, 9, 38);
+    navLights(-21.5, -10.5, 10.5, -11, seed);
+  }
+
+  function drawProp(liv, seed) {
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-16, -4.5); ctx.bezierCurveTo(-19, -10, -22, -15.5, -25.5, -15.5); ctx.lineTo(-27.5, -14.5); ctx.lineTo(-27, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    ctx.moveTo(-28, -4); ctx.lineTo(12, -5);
+    ctx.bezierCurveTo(21, -5, 25, -2, 25, 0.5);
+    ctx.bezierCurveTo(25, 3, 21, 5, 12, 5);
+    ctx.lineTo(-14, 5); ctx.lineTo(-28, -1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = liv; ctx.fillRect(-17, 0.4, 40, 1.6);
+    ctx.fillStyle = P.ink;
+    for (let wx = -12; wx <= 11; wx += 4.4) ctx.fillRect(wx, -3, 2.2, 2.2);
+    ctx.beginPath(); ctx.moveTo(18, -3.4); ctx.lineTo(22, -2.4); ctx.lineTo(23.2, -0.8); ctx.lineTo(18.5, -1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.body;
+    ctx.beginPath(); ctx.moveTo(-18, -1.5); ctx.lineTo(-28.5, -4.5); ctx.lineTo(-29.5, -2.3); ctx.lineTo(-21, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.moveTo(4, 2.5); ctx.lineTo(-4, 9.5); ctx.lineTo(-10, 9.5); ctx.lineTo(-6, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-2, 3.5, 11.5, 4.6, 2.2); else ctx.rect(-2, 3.5, 11.5, 4.6);
+    ctx.fill(); ctx.stroke();
+    propDisc(10.5, 5.8, 7, 32);
+    // tail wheel
+    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(-23, 1.8, 1.2, 0, TAU); ctx.fill();
+    navLights(-25.5, -15.5, -8, 9.5, seed);
+  }
+
+  function drawFighter(liv, seed) {
+    // afterburner
+    const fl = 7 + Math.sin(t * 40 + seed) * 2.5;
+    ctx.fillStyle = FLAME; ctx.beginPath(); ctx.moveTo(-20, -2.3); ctx.lineTo(-20 - fl, 0); ctx.lineTo(-20, 2.3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = FLAME_CORE; ctx.beginPath(); ctx.moveTo(-20, -1.2); ctx.lineTo(-20 - fl * 0.55, 0); ctx.lineTo(-20, 1.2); ctx.closePath(); ctx.fill();
+    // tail fin
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-9, -3.5); ctx.lineTo(-17.5, -13); ctx.lineTo(-21, -13); ctx.lineTo(-20, -3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // fuselage
+    ctx.fillStyle = P.steel;
+    ctx.beginPath();
+    ctx.moveTo(25, 0.5); ctx.lineTo(12, -3); ctx.lineTo(-14, -3.8); ctx.lineTo(-20, -3); ctx.lineTo(-20, 3); ctx.lineTo(6, 3.2); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // canopy
+    ctx.fillStyle = P.ink;
+    ctx.beginPath(); ctx.moveTo(14, -2.8); ctx.quadraticCurveTo(8, -7.5, 1, -3.4); ctx.closePath(); ctx.fill();
+    // intake
+    ctx.fillRect(-1, -1.2, 6, 2.8);
+    // delta wing
+    ctx.fillStyle = P.steel;
+    ctx.beginPath(); ctx.moveTo(4, 1.5); ctx.lineTo(-13, 7.5); ctx.lineTo(-18.5, 7.5); ctx.lineTo(-17, 1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // tailplane
+    ctx.beginPath(); ctx.moveTo(-15, 0.5); ctx.lineTo(-23, 3.5); ctx.lineTo(-20, 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // livery flash on the wing root
+    ctx.fillStyle = liv; ctx.fillRect(-10, 2.4, 6, 1.4);
+    navLights(-19.5, -13, -16, 7.5, seed);
+  }
+
+  // top/bottom: how far each model reaches above/below its centre line (local units)
+  const MODELS = {
+    jet: { draw: drawJet, top: 17, bottom: 11,
+      hit: [[27, 1.5], [21, -4.5], [-18, -4.5], [-23, -15], [-27, -15], [-27, -5], [-26, -1], [-14, 4.5],
+            [-10, 10], [-6, 10], [2, 9.5], [10, 9.5], [18, 4.8]] },
+    biplane: { draw: drawBiplane, top: 12, bottom: 13,
+      hit: [[17, -8], [17, 8], [9, 5], [5, 12.5], [1, 12.5], [-6, 5], [-21, 1.5], [-23, 1], [-21.5, -9.5], [-18, -9.5],
+            [-14, -3], [-7, -12], [11, -12], [15, -4]] },
+    prop: { draw: drawProp, top: 16, bottom: 13,
+      hit: [[25, 0.5], [20, -4.5], [-16, -4.5], [-24, -15], [-27.5, -14.5], [-27.5, -4], [-26, -1], [-14, 5],
+            [-10, 9.5], [-4, 9.5], [0, 8], [10.5, 12.5], [11.5, 4.5], [20, 4.5]] },
+    fighter: { draw: drawFighter, top: 13, bottom: 8,
+      hit: [[25, 0.5], [12, -3.5], [7, -6], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
+            [-18, 7], [-13, 7], [4, 3]] },
+  };
+
+  // Oncoming traffic by era: each unlocks at a score and is faster and more aggressive than the last.
+  const TRAFFIC = [
+    { model: 'biplane', unlock: 0, v: [25, 55], sc: [0.95, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0,
+      liveries: ['#c9483a', '#d9a62e', '#3f7a4a'] },
+    { model: 'prop', unlock: 200, v: [55, 95], sc: [0.85, 0.95], track: 6, wobble: 2, gap: 1.0, warn: 0,
+      liveries: ['#2e6f9a', '#8a5a2b', '#b8433a'] },
+    { model: 'jet', unlock: 450, v: [95, 150], sc: [0.8, 0.95], track: 16, wobble: 0, gap: 0.95, warn: 0.5,
+      liveries: ['#d0503c', '#2e9a8a', '#e08a2c', '#7a5bb5', '#c23b6b'] },
+    { model: 'fighter', unlock: 800, v: [190, 260], sc: [0.95, 1.05], track: 55, wobble: 0, gap: 0.8, warn: 0.9,
+      liveries: ['#5b6670', '#4f6b4a', '#6a5a8a'] },
+  ];
+
+  function modelPoly(m, x, y, ang, flip, sc) {
+    const c = Math.cos(ang), s = Math.sin(ang);
+    return m.hit.map(([lx, ly]) => {
+      const a = lx * flip * sc, b = ly * sc;
+      return [x + a * c - b * s, y + a * s + b * c];
+    });
+  }
+  function drawModel(m, x, y, ang, flip, sc, liv, seed) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(flip * sc, sc);
+    ctx.lineWidth = 1.3 / sc; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = P.ink;
+    m.draw(liv, seed);
     ctx.restore();
   }
 
@@ -388,11 +591,10 @@
     ctx.beginPath(); ctx.rect(-200, -200, 400, 200); ctx.clip();
     ctx.beginPath();
     for (const b of c.blobs) { ctx.moveTo(b.x + b.r, b.y); ctx.arc(b.x, b.y, b.r, 0, TAU); }
-    ctx.lineWidth = 2.6 / c.s; ctx.strokeStyle = c.near ? P.cloudLine : P.cloudLine;
+    ctx.lineWidth = 2.6 / c.s; ctx.strokeStyle = P.cloudLine;
     ctx.fillStyle = P.cloud;
     ctx.stroke(); ctx.fill();
     ctx.restore();
-    // flat underside
     let lo = Infinity, hiX = -Infinity;
     for (const b of c.blobs) {
       const d = Math.sqrt(Math.max(0, b.r * b.r - b.y * b.y));
@@ -452,6 +654,7 @@
   }
   const sfx = {
     flap: () => tone(360, 560, 0.07, 'square', 0.02),
+    sputter: () => { tone(120, 70, 0.06, 'square', 0.03); tone(110, 60, 0.06, 'square', 0.03, 0.08); },
     point: () => { tone(880, 0, 0.07, 'square', 0.03); tone(1320, 0, 0.12, 'square', 0.03, 0.09); },
     crash: () => tone(240, 50, 0.4, 'sawtooth', 0.05),
   };
@@ -462,23 +665,205 @@
     $('cross').style.display = muted ? '' : 'none';
   }
 
+  // ---------- pilots board ----------
+  // Backends, best first: claude.ai's shared store, a Supabase table, or this device only.
+  const panel = $('panel'), entry = $('entry'), nameIn = $('nameIn'), saveBtn = $('saveBtn'),
+        savedBox = $('saved'), savedText = $('savedText'), boardList = $('boardList'),
+        boardScope = $('boardScope'), boardNote = $('boardNote');
+  const cleanName = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
+  const cleanScore = (n) => clamp(Math.floor(Number(n) || 0), 0, 99999);
+  const Board = {
+    mode: 'local', rows: [], myId: null, readOnly: false, note: '',
+    best: parseInt(store.get('skyline-glide-saved'), 10) || 0,
+    name: cleanName(store.get('skyline-glide-name')),
+    db: null, localIdx: -1,
+  };
+  function loadLocalRows() {
+    try { return (JSON.parse(store.get('skyline-glide-board')) || []).map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score) })); }
+    catch (e) { return []; }
+  }
+  Board.rows = loadLocalRows();
+
+  function renderBoard() {
+    boardScope.textContent = Board.mode === 'local' ? 'THIS DEVICE' : 'GLOBAL';
+    boardList.textContent = '';
+    if (!Board.rows.length) {
+      const li = document.createElement('li');
+      li.className = 'none';
+      li.textContent = 'No scores yet. Fly to set the first one.';
+      boardList.appendChild(li);
+    }
+    Board.rows.forEach((r, i) => {
+      const li = document.createElement('li');
+      if ((Board.mode === 'db' && r.id && r.id === Board.myId) || (Board.mode !== 'db' && i === Board.localIdx)) li.className = 'me';
+      for (const text of [String(i + 1) + '.', r.name || 'PILOT', pad(r.score)]) {
+        const s = document.createElement('span'); s.textContent = text; li.appendChild(s);
+      }
+      boardList.appendChild(li);
+    });
+    boardNote.hidden = !Board.note;
+    boardNote.textContent = Board.note;
+  }
+
+  async function remoteFetch() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=10`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      });
+      if (!res.ok) throw new Error(res.status);
+      Board.rows = (await res.json()).map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score) }));
+      Board.note = '';
+    } catch (e) {
+      Board.note = 'The global board is offline right now. Your scores still count here.';
+    }
+    if (Board.mode === 'remote') renderBoard();
+  }
+
+  async function initBoard() {
+    renderBoard();
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) { Board.mode = 'remote'; Board.rows = []; remoteFetch(); }
+    const c = window.claude;
+    if (!c || typeof c.use !== 'function') return;
+    let db = null, user = null;
+    try { [db, user] = await Promise.all([c.use('db'), c.use('user')]); } catch (e) { return; }
+    if (!db) return;
+    Board.db = db; Board.mode = 'db'; Board.rows = []; Board.best = 0; Board.note = '';
+    try { Board.myId = user ? await user.id() : null; } catch (e) { Board.myId = null; }
+    let canWrite = null;
+    try { canWrite = user ? await user.can('data.write') : null; } catch (e) { canWrite = null; }
+    if (!Board.myId || canWrite === false) {
+      Board.readOnly = true;
+      Board.note = 'You can see the board, but only people the owner invites can post scores.';
+    }
+    renderBoard();
+    db.collection('scores').orderBy('score', 'desc').limit(10).onSnapshot((snap) => {
+      Board.rows = snap.docs.map((d) => { const v = d.data() || {}; return { id: d.id, name: cleanName(v.name), score: cleanScore(v.score) }; });
+      renderBoard();
+    }, () => { Board.note = 'The global board stopped updating. Reload the page to reconnect.'; renderBoard(); });
+    if (Board.myId) {
+      try {
+        const mine = await db.doc('scores/' + Board.myId).get();
+        if (mine.exists) {
+          const v = mine.data() || {};
+          Board.best = cleanScore(v.score);
+          if (!Board.name) Board.name = cleanName(v.name);
+        }
+      } catch (e) { /* keep defaults */ }
+    }
+  }
+
+  let pendingScore = 0, saving = false;
+  async function submitScore(name, value) {
+    if (saving) return;
+    saving = true; saveBtn.disabled = true;
+    Board.name = name; store.set('skyline-glide-name', name);
+    try {
+      if (Board.mode === 'db') {
+        await Board.db.doc('scores/' + Board.myId).set({ name, score: value, at: Date.now() });
+      } else if (Board.mode === 'remote') {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ name, score: value }),
+        });
+        if (!res.ok) throw { code: 'remote' };
+        remoteFetch();
+      } else {
+        const rows = loadLocalRows();
+        const row = { name, score: value };
+        rows.push(row);
+        rows.sort((a, b) => b.score - a.score);
+        Board.localIdx = rows.indexOf(row);
+        Board.rows = rows.slice(0, 10);
+        if (Board.localIdx >= 10) Board.localIdx = -1;
+        store.set('skyline-glide-board', JSON.stringify(Board.rows));
+      }
+      Board.best = Math.max(Board.best, value);
+      if (Board.mode !== 'db') store.set('skyline-glide-saved', String(Board.best));
+      pendingScore = 0;
+      entry.hidden = true;
+      savedText.textContent = `SAVED AS ${name}`;
+      savedBox.hidden = false;
+      $('editName').hidden = Board.mode === 'remote';
+    } catch (e) {
+      if (e && e.code === 'invalid_argument') {
+        Board.readOnly = true;
+        Board.note = 'You can see the board, but only people the owner invites can post scores.';
+        entry.hidden = true;
+      } else if (e && e.code === 'quota_exceeded') {
+        Board.note = 'The board is full, so this score was not saved.';
+      } else {
+        Board.note = 'Could not save your score. Check your connection and try again.';
+      }
+    }
+    saving = false; saveBtn.disabled = false;
+    renderBoard();
+  }
+  entry.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = cleanName(nameIn.value);
+    if (!name) { nameIn.focus(); return; }
+    nameIn.blur();
+    if (pendingScore) submitScore(name, pendingScore);
+    else if (Board.mode === 'db' && Board.best) submitScore(name, Board.best);
+    else {
+      Board.name = name; store.set('skyline-glide-name', name);
+      if (Board.mode === 'local' && Board.localIdx >= 0) {
+        Board.rows[Board.localIdx].name = name;
+        store.set('skyline-glide-board', JSON.stringify(Board.rows));
+      }
+      entry.hidden = true; savedText.textContent = `SAVED AS ${name}`; savedBox.hidden = false;
+      renderBoard();
+    }
+  });
+  $('editName').addEventListener('click', () => {
+    savedBox.hidden = true;
+    $('entryLabel').textContent = 'CHANGE YOUR NAME';
+    nameIn.value = Board.name;
+    entry.hidden = false;
+    nameIn.focus();
+  });
+
+  function showBoardAfterRun(final) {
+    entry.hidden = true; savedBox.hidden = true;
+    const isBest = final > 0 && final > Board.best && !Board.readOnly;
+    if (isBest) {
+      pendingScore = final;
+      if (Board.name) submitScore(Board.name, final);
+      else {
+        $('entryLabel').textContent = 'NEW BEST! ENTER YOUR NAME';
+        nameIn.value = '';
+        entry.hidden = false;
+      }
+    }
+    renderBoard();
+  }
+
   // ---------- game flow ----------
   function reset() {
     clusters = []; enemies = []; puffs = []; trail = [];
     elapsed = 0; dist = 0; score = 0; lastMilestone = 0; lastHf = 0.35;
-    speed = baseSpeed(); spawnCursor = W + 120; enemyTimer = 5;
-    player.y = playH * 0.42; player.vy = 0; player.angle = 0;
-    nightTarget = 0; nextToggle = 700;
+    speed = baseSpeed(); spawnCursor = W + 120; enemyTimer = 3.5;
+    if (state !== 'ready') player.y = playH * 0.42;
+    player.vy = 0; player.angle = 0;
+    fuel = 1; fuelOut = false;
+    nightTarget = 0; nextToggle = DAY_CYCLE;
   }
   function start() {
     state = 'playing';
-    msg.hidden = true; hint.hidden = true;
+    msg.hidden = true; hint.hidden = true; fuelEl.hidden = false;
+    if (document.activeElement === nameIn) nameIn.blur();
   }
   function press() {
     audio();
     if (state === 'ready') { reset(); start(); }
     else if (state === 'over') { if (overT < 0.5) return; reset(); start(); }
-    if (state === 'playing') { player.vy = Math.min(player.vy, -270 * k); sfx.flap(); }
+    if (state !== 'playing') return;
+    if (fuelOut) { sfx.sputter(); return; }
+    player.vy = Math.min(player.vy, -270 * k);
+    fuel -= FUEL.tap;
+    if (fuel <= 0) { fuel = 0; fuelOut = true; }
+    sfx.flap();
   }
   function crash() {
     state = 'over'; overT = 0;
@@ -490,14 +875,23 @@
     if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
     hiEl.textContent = 'HI ' + pad(hi);
     msgTitle.textContent = 'GAME OVER';
-    msgSub.textContent = 'TAP TO FLY AGAIN';
-    retry.hidden = false;
+    msgSub.textContent = 'TAP ANYWHERE TO FLY AGAIN';
+    fuelEl.hidden = true;
     msg.hidden = false;
+    showBoardAfterRun(score);
   }
 
+  function pickTraffic() {
+    const open = TRAFFIC.filter((m) => score >= m.unlock);
+    const newest = open[open.length - 1];
+    return open.length > 1 && Math.random() < 0.4 ? pick(open.slice(0, -1)) : newest;
+  }
   function trySpawnEnemy(diff) {
-    const sc = rand(0.78, 0.95);
-    const ex = W + 40;
+    const tr = pickTraffic(), m = MODELS[tr.model];
+    const sc = rand(tr.sc[0], tr.sc[1]);
+    const v = rand(tr.v[0], tr.v[1] + 30 * diff);
+    // Start far enough right that a warning shows for tr.warn seconds before it appears.
+    const ex = W + 40 + (speed + v) * tr.warn;
     // The enemy moves left faster than the towers, so it only ever crosses towers already spawned left of it.
     let minTop = groundY;
     for (const c of clusters) {
@@ -506,13 +900,14 @@
         minTop = Math.min(minTop, groundY - hB - ornUnit(hB) * 1.6);
       }
     }
-    const yMin = 22 + 17 * sc;
-    const yMax = minTop - (70 + 10 * k) - 11 * sc;
+    const yMin = 20 + m.top * sc + tr.wobble;
+    const yMax = minTop - (70 + 10 * k) - m.bottom * sc - tr.wobble;
     if (yMax < yMin) { enemyTimer = 0.6; return; }
-    const y = Math.random() < 0.55 ? clamp(player.y + rand(-25, 25), yMin, yMax) : rand(yMin, yMax);
-    for (const e of enemies) if (e.x > W * 0.45 && Math.abs(e.y - y) < 36) { enemyTimer = 0.5; return; }
-    enemies.push({ x: ex, y, v: rand(60, 110 + 60 * diff), sc, liv: pick(LIVERIES) });
-    enemyTimer = rand(2.6, 4.6) - diff * 1.3;
+    const aim = Math.random() < (tr.track ? 0.8 : 0.5);
+    const y = aim ? clamp(player.y + rand(-25, 25), yMin, yMax) : rand(yMin, yMax);
+    for (const e of enemies) if (e.x > W * 0.45 && Math.abs(e.base - y) < 36) { enemyTimer = 0.5; return; }
+    enemies.push({ x: ex, base: y, y, yMin, yMax, v, sc, tr, m, liv: pick(tr.liveries), seed: randi(1, 1e6) });
+    enemyTimer = (rand(2.4, 4.2) - diff * 1.2) * tr.gap;
   }
 
   function update(dt) {
@@ -537,7 +932,7 @@
     trail = trail.filter((s) => s.a > 0);
 
     if (state === 'ready') {
-      player.y = playH * (portrait ? 0.55 : 0.42) + Math.sin(t * 2.4) * 5;
+      player.y = playH * (portrait ? 0.7 : 0.42) + Math.sin(t * 2.4) * 5;
       player.angle = Math.cos(t * 2.4) * -0.05;
       return;
     }
@@ -551,8 +946,16 @@
     score = Math.floor(dist * 0.055);
 
     const g = 980 * k;
-    if (holding()) player.vy = Math.max(player.vy + (g - 2100 * k) * dt, -320 * k);
-    else player.vy = Math.min(player.vy + g * dt, 460 * k);
+    const thrusting = holding() && !fuelOut;
+    if (thrusting) {
+      player.vy = Math.max(player.vy + (g - 2100 * k) * dt, -320 * k);
+      fuel -= FUEL.burn * dt;
+      if (fuel <= 0) { fuel = 0; fuelOut = true; sfx.sputter(); }
+    } else {
+      player.vy = Math.min(player.vy + g * dt, 460 * k);
+      fuel = Math.min(1, fuel + FUEL.regen * dt);
+      if (fuelOut && fuel >= FUEL.relight) fuelOut = false;
+    }
     player.y += player.vy * dt;
     if (player.y < 18) { player.y = 18; player.vy = Math.max(player.vy, 0); }
     const target = clamp(player.vy / (460 * k) * 0.5, -0.38, 0.5);
@@ -561,30 +964,36 @@
     for (const c of clusters) c.x -= speed * dt;
     clusters = clusters.filter((c) => c.x + c.width > -20);
     spawnCursor -= speed * dt;
-    while (spawnCursor < W + 60) {
+    // Towers are generated well past the right edge so oncoming traffic always knows what it will cross.
+    while (spawnCursor < W + 800) {
       const c = makeCluster(spawnCursor, diff);
       clusters.push(c);
       spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1);
     }
 
-    for (const e of enemies) e.x -= (speed + e.v) * dt;
+    for (const e of enemies) {
+      e.x -= (speed + e.v) * dt;
+      // Aggressive models steer toward your altitude until they pass you, within their safe lane.
+      if (e.tr.track && e.x > px + 20) e.base += clamp(player.y - e.base, -e.tr.track * dt, e.tr.track * dt);
+      e.base = clamp(e.base, e.yMin, e.yMax);
+      e.y = e.base + Math.sin(t * 2.2 + e.seed) * e.tr.wobble;
+    }
     enemies = enemies.filter((e) => e.x > -80);
     enemyTimer -= dt;
-    if (enemyTimer <= 0 && elapsed > 4) trySpawnEnemy(diff);
+    if (enemyTimer <= 0 && elapsed > 3) trySpawnEnemy(diff);
 
     trailTimer -= dt;
-    if (trailTimer <= 0) {
+    if (trailTimer <= 0 && !fuelOut) {
       trailTimer = 0.04;
       const c = Math.cos(player.angle), s = Math.sin(player.angle);
-      trail.push({ x: px + (-1) * c - 8 * s, y: player.y + (-1) * s + 8 * c, a: 0.6 });
+      trail.push({ x: px - c - 8 * s, y: player.y - s + 8 * c, a: 0.6 });
     }
 
-    // milestones and day/night
     if (score >= lastMilestone + 100) { lastMilestone = Math.floor(score / 100) * 100; blinkScore(); sfx.point(); }
-    if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += 700; }
+    if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; }
 
     // collisions
-    const poly = planePoly(px, player.y, player.angle, 1, 0.95);
+    const poly = modelPoly(MODELS.jet, px, player.y, player.angle, 1, 0.95);
     for (const p of poly) if (p[1] >= groundY) return crash();
     for (const c of clusters) {
       if (c.x > px + 40 || c.x + c.width < px - 40) continue;
@@ -592,8 +1001,8 @@
       for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) if (polyHitsRect(poly, r)) return crash();
     }
     for (const e of enemies) {
-      if (Math.abs(e.x - px) > 70 || Math.abs(e.y - player.y) > 40) continue;
-      if (polyHitsPoly(poly, planePoly(e.x, e.y, 0, -1, e.sc))) return crash();
+      if (Math.abs(e.x - px) > 70 || Math.abs(e.y - player.y) > 45) continue;
+      if (polyHitsPoly(poly, modelPoly(e.m, e.x, e.y, 0, -1, e.sc))) return crash();
     }
   }
 
@@ -601,6 +1010,17 @@
     scoreEl.classList.remove('blink');
     void scoreEl.offsetWidth;
     scoreEl.classList.add('blink');
+  }
+
+  function renderFuel() {
+    const f = Math.round(fuel * 100) / 100;
+    if (f !== shownFuel) { shownFuel = f; fuelFill.style.transform = `scaleX(${f})`; }
+    const st = fuelOut ? 'empty' : fuel < 0.3 ? 'low' : '';
+    if (st !== shownFuelState) {
+      shownFuelState = st;
+      fuelEl.className = st === 'empty' ? 'low empty' : st;
+      fuelLabel.textContent = fuelOut ? 'NO FUEL' : 'FUEL';
+    }
   }
 
   function draw() {
@@ -616,7 +1036,6 @@
       ctx.globalAlpha = 1;
     }
 
-    // sun / moon
     const sx = W * 0.8, sy = Math.max(42, playH * 0.17), sr = 17;
     if (nightMix < 0.99) {
       ctx.globalAlpha = 1 - nightMix;
@@ -649,12 +1068,23 @@
       for (const tw of c.towers) drawTower(tw, c.x + tw.dx, y0);
     }
 
-    for (const e of enemies) drawPlane(e.x, e.y, 0, -1, e.sc, e.liv);
+    for (const e of enemies) {
+      if (e.x - 35 > W) {
+        // incoming warning at the right edge
+        if (Math.sin(t * 18) > -0.2) {
+          ctx.fillStyle = '#d0503c';
+          ctx.beginPath(); ctx.moveTo(W - 6, e.y - 7); ctx.lineTo(W - 16, e.y); ctx.lineTo(W - 6, e.y + 7); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(W - 15, e.y - 7); ctx.lineTo(W - 25, e.y); ctx.lineTo(W - 15, e.y + 7); ctx.closePath(); ctx.fill();
+        }
+        continue;
+      }
+      drawModel(e.m, e.x, e.y, 0, -1, e.sc, e.liv, e.seed);
+    }
 
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
     ctx.globalAlpha = 1;
-    drawPlane(px, player.y, player.angle, 1, 0.95, PLAYER_LIVERY);
+    drawModel(MODELS.jet, px, player.y, player.angle, 1, 0.95, PLAYER_LIVERY, 7);
 
     for (const p of puffs) {
       ctx.globalAlpha = Math.max(0, p.life);
@@ -663,7 +1093,6 @@
     }
     ctx.globalAlpha = 1;
 
-    // ground
     ctx.fillStyle = P.sky; ctx.fillRect(0, groundY, W, H - groundY);
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.4; ctx.lineCap = 'butt';
     ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
@@ -676,13 +1105,16 @@
     }
 
     if (score !== shownScore) { shownScore = score; scoreEl.textContent = pad(score); }
+    if (state === 'playing') renderFuel();
   }
 
   // ---------- input ----------
-  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute');
+  // Controls on the board keep their taps; a tap anywhere else, the board's background included, flies.
+  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute, #panel button, #panel input, #panel label, #boardList');
   window.addEventListener('pointerdown', (e) => {
     if (isUi(e)) return;
     e.preventDefault();
+    if (document.activeElement === nameIn) nameIn.blur();
     pointers.add(e.pointerId);
     press();
   }, { passive: false });
@@ -690,17 +1122,15 @@
   window.addEventListener('pointerup', release);
   window.addEventListener('pointercancel', release);
   window.addEventListener('touchstart', (e) => { if (!isUi(e)) e.preventDefault(); }, { passive: false });
-  window.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-  window.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('touchmove', (e) => { if (!isUi(e)) e.preventDefault(); }, { passive: false });
+  window.addEventListener('contextmenu', (e) => { if (!isUi(e)) e.preventDefault(); });
+  const isFlyKey = (e) => e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW';
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-      e.preventDefault();
-      if (!e.repeat) { keyHeld = true; press(); }
-    }
+    if (e.target === nameIn || !isFlyKey(e)) return;
+    e.preventDefault();
+    if (!e.repeat) { keyHeld = true; press(); }
   });
-  window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keyHeld = false;
-  });
+  window.addEventListener('keyup', (e) => { if (isFlyKey(e)) keyHeld = false; });
   window.addEventListener('blur', () => { pointers.clear(); keyHeld = false; });
   muteBtn.addEventListener('click', () => {
     muted = !muted;
@@ -727,6 +1157,7 @@
   renderMute();
   hiEl.textContent = 'HI ' + pad(hi);
   window.addEventListener('resize', resize);
+  initBoard();
   requestAnimationFrame(frame);
 })();
 </script>
