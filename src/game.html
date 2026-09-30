@@ -249,6 +249,14 @@
     text-align: center; text-wrap: balance;
     pointer-events: none; z-index: 5;
   }
+  #botBadge {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+    transform: translateX(-50%);
+    padding: 6px 10px; border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--sky); color: var(--ink);
+    font: clamp(7px, 2vw, 9px)/1 var(--pixel); letter-spacing: 0.08em;
+    pointer-events: none; z-index: 4; animation: pulse 1.2s steps(2) infinite;
+  }
   #toast.gold { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold) inset; }
   #account {
     position: fixed;
@@ -335,6 +343,7 @@
     </div>
     <div class="actions">
       <button class="px ghost" id="homeBtn" type="button" hidden>HOME</button>
+      <button class="px ghost" id="botBtn" type="button">WATCH BOT</button>
       <button class="px" id="flyBtn" type="button">FLY</button>
     </div>
   </section>
@@ -372,6 +381,7 @@
   </section>
 </div>
 
+<div id="botBadge" hidden>AUTOPILOT · TAP TO STOP</div>
 <script>
 (() => {
   'use strict';
@@ -463,7 +473,8 @@
   const player = { y: 0, vy: 0, angle: 0 };
   const pointers = new Set();
   let keyHeld = false;
-  const holding = () => pointers.size > 0 || keyHeld;
+  let bot = false, botHold = false; // autopilot: its runs never count for scores, awards or dailies
+  const holding = () => pointers.size > 0 || keyHeld || (bot && botHold);
   const baseSpeed = () => (portrait ? 150 : 175);
 
   // Fuel: taps sip, holding burns; it refills while you're off the throttle.
@@ -1865,6 +1876,7 @@
 
   // ---------- hangar ----------
   const hangarEl = $('hangar'), resultEl = $('result'), flyBtn = $('flyBtn'), homeBtn = $('homeBtn');
+  const botBtn = $('botBtn'), botBadge = $('botBadge');
   const swatchesEl = $('swatches');
   let viewIdx = PLANES.indexOf(choice.plane); // the plane shown in the hangar, which may still be locked
   const pv = $('preview'), pctx = pv.getContext('2d');
@@ -1962,6 +1974,7 @@
     { id: 'persistent', name: 'PERSISTENT', desc: 'Play 50 runs.', test: () => stats.runs >= 50 },
   ];
   function checkAchievements() {
+    if (bot) return;
     const best = Math.max(hi, state === 'playing' ? score : 0);
     let any = false;
     for (const a of ACHIEVEMENTS) {
@@ -2007,6 +2020,7 @@
     return daily;
   }
   function dailyProgress(metric, value, best) {
+    if (bot) return;
     const d = dailyToday();
     let changed = false;
     d.tasks.forEach((task, i) => {
@@ -2026,6 +2040,7 @@
 
   // events from the game
   function onPass(id) {
+    if (bot) return;
     if (!run) return;
     run.passed++;
     stats.types[id] = (stats.types[id] || 0) + 1;
@@ -2033,11 +2048,13 @@
     checkAchievements();
   }
   function onLandmark(lm) {
+    if (bot) return;
     stats.landmarks[lm] = (stats.landmarks[lm] || 0) + 1;
     dailyProgress('landmarks', 1); dailyProgress('lm:' + lm, 1);
     saveStats(); checkAchievements();
   }
   function onDayChange(night) {
+    if (bot) return;
     if (night) { stats.nightfalls++; dailyProgress('nightfalls', 1); } else stats.sunrises++;
     saveStats(); checkAchievements();
   }
@@ -2048,6 +2065,7 @@
     if (run.fuelOutAt == null) run.fuelOutAt = elapsed;
   }
   function runProgress() {
+    if (bot) return;
     if (!run) return;
     if (run.fuelOuts === 0) run.clean = score;
     if (run.fuelOutAt != null && !run.deadstick && elapsed - run.fuelOutAt >= 5) run.deadstick = true;
@@ -2056,6 +2074,7 @@
     checkAchievements();
   }
   function onRunEnd(final) {
+    if (bot) return;
     if (!run) return;
     if (run.fuelOuts === 0) run.clean = final;
     stats.runs++; stats.total += final; saveStats();
@@ -2485,14 +2504,23 @@
     // ask the server for this run's token; the score can only be saved against it
     currentRun = Board.mode === 'remote' ? rpc('start_run').catch(() => null) : null;
     run = newRun();
+    bot = false; botBadge.hidden = true;
     audio(); reset(); start(); flap();
   }
+  function launchBot() {
+    viewIdx = PLANES.indexOf(choice.plane);
+    currentRun = null; // never asks the server for a run token, so it can never post a score
+    run = newRun();
+    bot = true; botHold = false; botBadge.hidden = false;
+    audio(); reset(); start();
+  }
   function press() {
+    if (state === 'playing' && bot) { bot = false; botHold = false; botBadge.hidden = true; return showHome(); }
     if (state === 'ready' || (state === 'over' && overT >= 0.5)) return launch();
     if (state === 'playing') { if (run) run.taps++; flap(); }
   }
   function showHome() {
-    state = 'ready';
+    state = 'ready'; bot = false; botHold = false; botBadge.hidden = true;
     reset();
     shownScore = -1;
     ovTitle.textContent = 'SKYLINE GLIDE';
@@ -2513,10 +2541,11 @@
     hint.hidden = true;
     fuelEl.hidden = true;
     overlay.hidden = false; accountBtn.hidden = !authAvailable();
-    showBoardAfterRun(score);
+    if (bot) { entry.hidden = true; savedBox.hidden = true; } else showBoardAfterRun(score);
     renderTabs();
   }
   flyBtn.addEventListener('click', () => { if (state !== 'playing') launch(); });
+  botBtn.addEventListener('click', () => { if (state !== 'playing') launchBot(); });
   homeBtn.addEventListener('click', showHome);
   function crash() {
     state = 'over'; overT = 0;
@@ -2528,14 +2557,18 @@
       puffs.push({ x: px + rand(-6, 16), y: player.y + rand(-6, 6), vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, r: rand(3, 7), life: 1 });
     }
     const before = bestEver();
-    if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
-    hiEl.textContent = 'HI ' + pad(hi);
-    onRunEnd(score);
-    queueSync(true);
-    const fresh = PLANES.filter((p) => p.unlock > before && p.unlock <= score);
+    if (!bot) {
+      if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
+      hiEl.textContent = 'HI ' + pad(hi);
+      onRunEnd(score);
+      queueSync(true);
+    }
+    const fresh = bot ? [] : PLANES.filter((p) => p.unlock > before && p.unlock <= score);
     const unlockMsg = $('unlockMsg');
-    unlockMsg.hidden = !fresh.length;
-    unlockMsg.textContent = fresh.length ? `UNLOCKED: ${fresh.map((p) => p.name).join(', ')}! PICK IT IN THE HANGAR.` : '';
+    unlockMsg.hidden = !fresh.length && !bot;
+    unlockMsg.textContent = bot ? 'AUTOPILOT RUN · NOT SAVED TO THE BOARD'
+      : fresh.length ? `UNLOCKED: ${fresh.map((p) => p.name).join(', ')}! PICK IT IN THE HANGAR.` : '';
+    botBadge.hidden = true;
     showOver();
   }
 
@@ -2616,6 +2649,102 @@
   }
 
 
+  // ---------- autopilot ----------
+  // Every frame it tries ~30 hold/release plans 1.5 s ahead with the game's own physics, predicts the towers,
+  // traffic (including chasing and bobbing) and laser locks, and takes the first move of the safest plan.
+  const BOT_DT = 1 / 30, BOT_STEPS = 45;
+  function botBox(poly) {
+    let x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9;
+    for (const [x, y] of poly) { if (x < x1) x1 = x; if (x > x2) x2 = x; if (y < y1) y1 = y; if (y > y2) y2 = y; }
+    return [x1, y1, x2, y2];
+  }
+  // distance between two boxes, or -1 when they overlap
+  function boxGap(a, b) {
+    const dx = Math.max(b[0] - a[2], a[0] - b[2], 0), dy = Math.max(b[1] - a[3], a[1] - b[3], 0);
+    return dx === 0 && dy === 0 ? -1 : Math.hypot(dx, dy);
+  }
+  // the player's bounding box for each nose angle, relative to its centre (cached per plane)
+  const botBoxCache = new Map();
+  function botAngleBoxes(sh) {
+    if (!botBoxCache.has(sh)) {
+      const list = [];
+      for (let i = 0; i <= 45; i++) list.push(botBox(modelPoly(sh, 0, 0, -0.4 + i * 0.02, 1, sh.sc)));
+      botBoxCache.set(sh, list);
+    }
+    return botBoxCache.get(sh);
+  }
+  function botDecide() {
+    const sh = playerShape(), g = 980 * k, horizon = BOT_STEPS * BOT_DT, boxes = botAngleBoxes(sh);
+    const rects = [];
+    for (const c of clusters) {
+      if (c.x > px + speed * horizon + 80 || c.x + c.width < px - 80) continue;
+      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, towerTop(c, tw))) rects.push([r[0], r[1], r[0] + r[2], r[1] + r[3]]);
+    }
+    const foes = enemies.filter((e) => e.x > px - 90 && e.x - (speed + e.v) * horizon < px + 120)
+      .map((e) => ({ e, b: botBox(modelPoly(e.m, 0, 0, 0, -1, e.sc)) }));
+    const lockM = CRAFT[INTERCEPTOR.id];
+    const lk = locks.map((L) => ({ L, b: botBox(modelPoly(lockM, 0, 0, 0, -1, L.sc)), tf: Math.max(0, LOCK_FIRE - L.t), tl: Math.max(0, LOCK_TRACK - L.t) }));
+    // Plans: tap in a rhythm (first tap after a steps, then every q steps), or hold for h steps then glide.
+    // Taps are what keep fuel healthy; holding is for hard climbs.
+    const plans = [];
+    for (const a of [0, 2, 4, 6, 9, 12, 15, 18, 24, 30, 38, 99]) for (const q of [8, 11, 14, 17, 21, 99]) plans.push({ a, q, h: 0 });
+    for (let h = 3; h <= 24; h += 3) plans.push({ a: 99, q: 99, h });
+    let best = { hold: false, tap: false }, bestCost = Infinity;
+    for (const plan of plans) {
+      let y = player.y, vy = player.vy, ang = player.angle, f = fuel, out = fuelOut, cost = 0;
+      const lockY = lk.map((o) => (o.tl > 0 ? null : o.L.y));
+      for (let i = 1; i <= BOT_STEPS; i++) {
+        const tau = i * BOT_DT;
+        const step = i - 1, tapNow = step >= plan.a && (step - plan.a) % plan.q === 0;
+        if (tapNow) { cost += 0.6; if (!out) { vy = Math.min(vy, -270 * k); f -= FUEL.tap; if (f <= 0) { f = 0; out = true; } } }
+        const thrust = i <= plan.h && !out;
+        if (thrust) cost += 1.2;
+        if (thrust) { vy = Math.max(vy + (g - 2100 * k) * BOT_DT, -320 * k); f -= FUEL.burn * BOT_DT; if (f <= 0) { f = 0; out = true; } }
+        else { vy = Math.min(vy + g * BOT_DT, 460 * k); f = Math.min(1, f + FUEL.regen * BOT_DT); if (out && f >= FUEL.relight) out = false; }
+        y += vy * BOT_DT;
+        if (y < 18) { y = 18; vy = Math.max(vy, 0); }
+        ang += (clamp(vy / (460 * k) * 0.5, -0.38, 0.5) - ang) * Math.min(1, BOT_DT * 10);
+        const ab = boxes[clamp(Math.round((ang + 0.4) / 0.02), 0, 45)];
+        const pb = [px + ab[0] - 1.5, y + ab[1] - 1.5, px + ab[2] + 1.5, y + ab[3] + 1.5];
+        let hit = pb[3] >= groundY, near = 1e9;
+        const shift = speed * tau;
+        if (!hit) for (const r of rects) {
+          if (r[0] - shift > pb[2] + 24 || r[2] - shift < pb[0] - 24) continue;
+          const d = boxGap(pb, [r[0] - shift, r[1], r[2] - shift, r[3]]);
+          if (d < 0) { hit = true; break; }
+          if (d < near) near = d;
+        }
+        if (!hit) for (const { e, b } of foes) {
+          const ex = e.x - (speed + e.v) * tau;
+          if (ex < px - 90 || ex > px + 130) continue;
+          let base = e.base;
+          if (e.tr.track && e.x > px + 20) base += clamp(player.y - base, -e.tr.track * tau, e.tr.track * tau);
+          base = clamp(base, e.yMin, e.yMax);
+          const ey = base + Math.sin((t + tau) * (e.tr.wobbleRate || 2.2) + e.seed) * e.tr.wobble;
+          const d = boxGap(pb, [ex + b[0], ey + b[1], ex + b[2], ey + b[3]]);
+          if (d < 0) { hit = true; break; }
+          if (d < near) near = d;
+        }
+        lk.forEach((o, j) => {
+          if (lockY[j] == null && tau >= o.tl) lockY[j] = y; // the laser freezes wherever we are then
+          if (hit || lockY[j] == null || tau < o.tf) return;
+          const s2 = tau - o.tf, ly = lockY[j];
+          const x1 = W + 30 - (speed + INTERCEPTOR.v[1]) * s2, x2 = W + 30 - (speed + INTERCEPTOR.v[0]) * s2;
+          if (x1 > px + 130 || x2 < px - 90) return;
+          const d = boxGap(pb, [x1 + o.b[0], ly + o.b[1], x2 + o.b[2], ly + o.b[3]]);
+          if (d < 0) hit = true; else if (d < near) near = d;
+        });
+        if (hit) { cost += 1e6 * (BOT_STEPS - i + 1) / BOT_STEPS; break; }
+        const w = 1 - (tau / horizon) * 0.5;
+        if (near < 24) cost += (24 - near) * (24 - near) * w;
+        cost += ((y - groundY * 0.42) / groundY) ** 2 * 30;
+        if (f < 0.3) cost += (0.3 - f) * 40;
+      }
+      if (cost < bestCost) { bestCost = cost; best = { hold: plan.h > 0, tap: plan.a === 0 }; }
+    }
+    return best;
+  }
+
   function update(dt) {
     t += dt;
     updateToast(dt);
@@ -2664,6 +2793,11 @@
     if (progTimer <= 0) { progTimer = 0.5; runProgress(); }
 
     const g = 980 * k;
+    if (bot) {
+      const d = botDecide();
+      botHold = d.hold;
+      if (d.tap) { run.taps++; flap(); }
+    }
     const thrusting = holding() && !fuelOut;
     if (thrusting) {
       player.vy = Math.max(player.vy + (g - 2100 * k) * dt, -320 * k);
