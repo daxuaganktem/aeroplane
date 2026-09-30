@@ -1,0 +1,19 @@
+{
+  "name": "Skyline Glide",
+  "short_name": "Skyline Glide",
+  "description": "Tap to climb, hold to keep climbing: fly over the city, dodge oncoming aircraft and chase the top 10.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#e3f2f8",
+  "theme_color": "#a8d6ea",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

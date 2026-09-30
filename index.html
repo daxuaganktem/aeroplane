@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#a8d6ea">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skyline Glide">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
 <title>Skyline Glide</title>
@@ -1704,6 +1710,7 @@
     saveStats(); checkAchievements();
   }
   function onFuelOut() {
+    buzz(false);
     if (!run) return;
     run.fuelOuts++;
     if (run.fuelOutAt == null) run.fuelOutAt = elapsed;
@@ -1779,6 +1786,17 @@
     }
   }
 
+  // ---------- native apps (Capacitor) ----------
+  // Inside the iOS/Android apps, Capacitor exposes native plugins; on the web these return null.
+  const isNative = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const nativePlugin = (name) => (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null;
+  function buzz(strong) {
+    const haptics = nativePlugin('Haptics');
+    if (haptics) haptics.impact({ style: strong ? 'HEAVY' : 'LIGHT' }).catch(() => {});
+    else if (navigator.vibrate) { try { navigator.vibrate(strong ? 60 : 20); } catch (e) { /* not allowed here */ } }
+  }
+  if (nativePlugin('StatusBar')) nativePlugin('StatusBar').hide().catch(() => {});
+
   // ---------- accounts: optional sign-in that saves progress to Supabase ----------
   // Google sign-in through Supabase Auth, handled with plain fetch calls. Only offered where the
   // Supabase board is in use (the GitHub Pages build), never inside claude.ai.
@@ -1788,7 +1806,9 @@
   const Auth = { session: null, user: null, lastSync: 0, syncing: false, error: '' };
   const accountBtn = $('account'), accountModal = $('accountModal'), accountBody = $('accountBody');
   const authAvailable = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY) && Board.mode === 'remote'
-    && /^https?:$/.test(location.protocol) && !(window.claude && typeof window.claude.use === 'function');
+    && (/^https?:$/.test(location.protocol) || isNative()) && !(window.claude && typeof window.claude.use === 'function');
+  // In the iOS and Android apps, sign-in opens in the system browser and comes back through this link.
+  const NATIVE_REDIRECT = 'skylineglide://auth';
 
   // Signed in, requests carry the player's token; otherwise only the publishable key.
   function sbHeaders(extra) {
@@ -1823,24 +1843,42 @@
       if (j.user) Auth.user = j.user;
     } catch (e) { /* offline: keep the old token and try again later */ }
   }
-  // After Google sends the player back, the tokens arrive in the address bar's #fragment.
-  function readRedirect() {
-    const h = new URLSearchParams(location.hash.slice(1));
-    const clean = () => history.replaceState(null, '', location.pathname + location.search);
+  // After Google sends the player back, the tokens arrive in the address's #fragment.
+  function sessionFromFragment(fragment) {
+    const h = new URLSearchParams(fragment);
     if (h.get('access_token')) {
-      clean();
       return { access_token: h.get('access_token'), refresh_token: h.get('refresh_token'),
                expires_at: Number(h.get('expires_at')) || Date.now() / 1000 + Number(h.get('expires_in') || 3600) };
     }
-    if (h.get('error')) { Auth.error = `Sign-in didn't finish: ${h.get('error_description') || h.get('error')}.`; clean(); }
+    if (h.get('error')) Auth.error = `Sign-in didn't finish: ${h.get('error_description') || h.get('error')}.`;
     return null;
+  }
+  function readRedirect() {
+    if (!/access_token|error/.test(location.hash)) return null;
+    const s = sessionFromFragment(location.hash.slice(1));
+    history.replaceState(null, '', location.pathname + location.search);
+    return s;
   }
   async function initAuth() {
     if (!authAvailable()) return;
     accountBtn.hidden = state === 'playing';
-    let s = readRedirect(), fresh = !!s;
+    const app = nativePlugin('App');
+    if (app) {
+      app.addListener('appUrlOpen', ({ url }) => {
+        if (!String(url).startsWith(NATIVE_REDIRECT)) return;
+        const browser = nativePlugin('Browser');
+        if (browser) browser.close().catch(() => {});
+        const s = sessionFromFragment(String(url).split('#')[1] || String(url).split('?')[1] || '');
+        if (s) finishSignIn(s, true); else { renderAccount(); openAccount(); }
+      });
+    }
+    let s = readRedirect();
+    const fresh = !!s;
     if (!s) { try { s = JSON.parse(store.get(SESSION_KEY)); } catch (e) { s = null; } }
     if (!s || !s.access_token) { renderAccount(); if (Auth.error) openAccount(); return; }
+    await finishSignIn(s, fresh);
+  }
+  async function finishSignIn(s, fresh) {
     saveSession(s);
     try {
       await ensureFresh();
@@ -1855,8 +1893,11 @@
     renderAccount();
   }
   function signIn(provider) {
-    const back = location.origin + location.pathname;
-    location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(back)}`;
+    const browser = nativePlugin('Browser');
+    const back = browser ? NATIVE_REDIRECT : location.origin + location.pathname;
+    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(back)}`;
+    if (browser) browser.open({ url }).catch(() => { Auth.error = "Couldn't open the sign-in page."; renderAccount(); });
+    else location.href = url;
   }
   function signOutLocal(message) {
     saveSession(null); Auth.user = null; Auth.error = message || '';
@@ -2034,6 +2075,7 @@
     state = 'over'; overT = 0;
     lastRun = currentRun; currentRun = null;
     sfx.crash();
+    buzz(true);
     for (let i = 0; i < 12; i++) {
       const a = rand(0, TAU), v = rand(15, 60);
       puffs.push({ x: px + rand(-6, 16), y: player.y + rand(-6, 6), vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, r: rand(3, 7), life: 1 });
@@ -2343,6 +2385,11 @@
   initAuth();
   requestAnimationFrame(frame);
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

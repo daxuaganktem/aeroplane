@@ -17,7 +17,7 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 - **Daily challenges:** three a day, the same for everyone on a given date, picked from nine kinds. Examples: "Fly past 4 helicopters", "Score 300 without running out of fuel", "Fly past the stadium". They reset at local midnight and are tracked on the **Daily** tab.
 - **Achievements:** 21 of them, from *First flight* to *Grand tour* (all five landmarks), *Plane spotter* (all ten opponent types) and *Dead stick* (stay airborne 5 seconds with an empty tank). They pop up as you earn them and are listed on the **Awards** tab. Progress is saved on the device.
 
-`src/game.html` is the source. Run `./build.sh` to regenerate the standalone `index.html`, which you can open directly or serve from any static host.
+`src/game.html` is the source. Run `./build.sh` to regenerate the standalone `index.html` (and the `www/` folder the phone apps bundle). You can open it directly or serve it from any static host.
 
 ## Top pilots board
 
@@ -92,3 +92,36 @@ Guests can still play and use the board without signing in. The claude.ai versio
 4. **Turn on Google in Supabase.** Go to **Authentication → Sign In / Providers → Google**, enable it, paste the Client ID and secret, and save.
 
 To also offer GitHub sign-in, create an OAuth app under GitHub **Settings → Developer settings → OAuth Apps** with the same callback URL. Enable **GitHub** in Supabase, then add `{ id: 'github', label: 'CONTINUE WITH GITHUB' }` to `AUTH_PROVIDERS` in `src/game.html`.
+
+## Install on a phone (web app)
+
+The GitHub Pages build is an installable web app: `manifest.webmanifest`, `sw.js` and `icons/`. It has its own icon, opens full-screen, and works offline. Scores and sign-in sync when a connection is back.
+
+- **Android (Chrome):** open the game, then tap **⋮ → Install app** (or **Add to Home screen**).
+- **iPhone/iPad (Safari):** open the game, then tap **Share → Add to Home Screen**.
+
+After changing `sw.js`, bump `CACHE` in it so installed copies pick up the new version.
+
+## iOS and Android apps (Capacitor)
+
+`android/` and `ios/` are native projects that wrap the same game with [Capacitor](https://capacitorjs.com/). They use native haptics, a hidden status bar, and Google sign-in through the system browser, which returns to the app via `skylineglide://auth`.
+
+**One-time setup**
+1. Install [Node.js](https://nodejs.org/) 22+, then run `npm install` in this folder.
+2. Android: install [Android Studio](https://developer.android.com/studio).
+3. iOS: use a Mac with [Xcode](https://developer.apple.com/xcode/).
+4. In Supabase → **Authentication → URL Configuration**, add `skylineglide://auth` to **Redirect URLs**.
+
+**Everyday commands**
+| Command | What it does |
+|---|---|
+| `npm run android` | rebuilds, syncs and opens the project in Android Studio. Press ▶ to run it on a phone or emulator. |
+| `npm run ios` | the same for Xcode. Pick your team under **Signing & Capabilities**, then run it. |
+| `npm run native:sync` | copies the latest game into both apps without opening an IDE |
+| `npm run icons` then `npm run native:assets` | redraws the icons from `tools/icon.html` and regenerates every native icon and splash screen |
+
+**Publishing**
+- **Google Play:** a developer account ($25 once). In Android Studio, **Build → Generate Signed App Bundle**, then upload the `.aab` in Play Console.
+- **App Store:** an Apple Developer Program membership ($99/year). In Xcode, **Product → Archive**, then upload through the Organizer and submit in App Store Connect.
+- **Sign in with Apple:** Apple's review guideline 4.8 generally requires it when an app offers Google sign-in. Enable the Apple provider in Supabase and add it to `AUTH_PROVIDERS` before submitting.
+- The app ID is `io.github.daxuaganktem.skylineglide` (in `capacitor.config.json`). Change it before the first store upload if you want a different one; it can't be changed afterwards.

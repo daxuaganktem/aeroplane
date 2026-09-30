@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.daxuaganktem.skylineglide",
+  "appName": "Skyline Glide",
+  "webDir": "www",
+  "backgroundColor": "#e3f2f8",
+  "android": {
+    "backgroundColor": "#e3f2f8"
+  },
+  "ios": {
+    "backgroundColor": "#e3f2f8",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": true
+    }
+  }
+}

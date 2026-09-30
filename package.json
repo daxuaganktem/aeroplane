@@ -1,0 +1,29 @@
+{
+  "name": "skyline-glide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skyline Glide: a one-button plane game for the web, iOS and Android.",
+  "type": "module",
+  "scripts": {
+    "build": "./build.sh",
+    "icons": "node tools/make-icons.mjs",
+    "native:assets": "capacitor-assets generate --ios --android --iconBackgroundColor '#a8d6ea' --splashBackgroundColor '#e3f2f8'",
+    "native:sync": "./build.sh && cap sync",
+    "android": "npm run native:sync && cap open android",
+    "ios": "npm run native:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/status-bar": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "8.5.2",
+    "playwright": "1.56.1"
+  }
+}
