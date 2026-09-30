@@ -2,7 +2,7 @@
 
 A one-button, mobile-first browser game: fly a little airliner over city tower clusters and dodge oncoming traffic.
 
-- **Home screen hangar:** pick an airliner, jumbo jet, business jet or turboprop, and one of six liveries. The crash screen has **Fly again** and **Home**.
+- **Hangar:** pixel-art planes you unlock with your best score: Airliner (from the start), Turboprop (150), Business jet (400), Jumbo jet (800) and Fighter jet (1500), each in six liveries. Locked planes show as silhouettes. The crash screen has **Fly again** and **Home**.
 - **Tap** anywhere to climb, **hold** to keep climbing (Space / ↑ on desktop).
 - **Fuel:** taps sip fuel, holding burns it fast, and it refills while you're off the throttle. Run dry and the engine cuts out until the tank is back to a quarter.
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops.

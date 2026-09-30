@@ -120,17 +120,19 @@
   #right { grid-area: right; overflow: hidden; }
   #hangar, #result { display: flex; flex-direction: column; gap: 10px; }
   .cardHead { display: flex; justify-content: space-between; gap: 8px; opacity: 0.7; }
-  #preview { width: 100%; height: 64px; display: block; flex: none; }
-  .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  @media (max-width: 330px) { .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .chip {
-    font: clamp(7px, 2vw, 10px)/1.2 var(--pixel); letter-spacing: 0.02em;
-    min-width: 0; min-height: 36px; padding: 6px 2px;
-    border: 2px solid var(--ink); border-radius: 2px;
-    background: var(--sky); color: var(--ink);
-    cursor: pointer;
-  }
-  .chip[aria-pressed="true"] { background: var(--ink); color: var(--sky); }
+  #preview { width: 100%; height: 88px; display: block; flex: none; }
+  .picker { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 8px; }
+  .picker .arrow { min-height: 38px; padding: 0; font-size: 12px; }
+  .pick { display: grid; justify-items: center; gap: 4px; text-align: center; }
+  #pickName { font-size: 1.15em; }
+  #pickStatus { opacity: 0.7; font-size: 0.85em; }
+  #pickStatus.locked { color: var(--warn); opacity: 1; }
+  .pips { display: flex; justify-content: center; gap: 6px; }
+  .pips span { width: 8px; height: 8px; box-sizing: border-box; border: 2px solid var(--ink); }
+  .pips span.on { background: var(--ink); }
+  .pips span.locked { border-style: dotted; opacity: 0.6; }
+  #unlockHint { opacity: 0.7; font-size: 0.9em; }
+  #unlockMsg { color: var(--warn); }
   .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
   .swatch {
     width: 30px; height: 30px; padding: 0;
@@ -188,8 +190,8 @@
     #ovHead { gap: 4px; }
     .card { padding: 8px 10px; gap: 7px; }
     #hangar, #result { gap: 7px; }
-    #preview { height: 44px; }
-    .chip { min-height: 30px; }
+    #preview { height: 50px; }
+    .picker .arrow { min-height: 32px; }
     .swatch { width: 26px; height: 26px; }
     .actions .px { min-height: 36px; }
   }
@@ -222,11 +224,18 @@
     <div id="hangar">
       <div class="cardHead"><span>HANGAR</span><span id="planeName">AIRLINER</span></div>
       <canvas id="preview" aria-hidden="true"></canvas>
-      <div class="chips" id="planeChips" role="group" aria-label="Plane type"></div>
+      <div class="picker" role="group" aria-label="Plane type">
+        <button type="button" class="px ghost arrow" id="prevPlane" aria-label="Previous plane">&lt;</button>
+        <div class="pick" aria-live="polite"><span id="pickName">AIRLINER</span><span id="pickStatus"></span></div>
+        <button type="button" class="px ghost arrow" id="nextPlane" aria-label="Next plane">&gt;</button>
+      </div>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <div id="unlockHint"></div>
       <div class="swatches" id="swatches" role="group" aria-label="Livery colour"></div>
     </div>
     <div id="result" hidden>
       <div class="bigScore"><span>SCORE</span><strong id="finalScore">00000</strong></div>
+      <div id="unlockMsg" hidden></div>
       <form id="entry" hidden>
         <label for="nameIn" id="entryLabel">NEW BEST! ENTER YOUR NAME</label>
         <div class="row">
@@ -697,27 +706,195 @@
             [-28, -17.6], [-28.5, -15.2], [-25, -4.5], [-25, -1], [-12, 4.5], [-5, 6], [5, 6], [20, 4.5]] },
   };
 
-  // Player hangar: plane types and liveries chosen on the home screen.
+  // Player hangar: pixel-art planes that unlock with your best score, in six liveries.
   const PLANES = [
-    { id: 'airliner', label: 'AIRLINER', name: 'AIRLINER', model: 'jet', sc: 0.95 },
-    { id: 'jumbo', label: 'JUMBO', name: 'JUMBO JET', model: 'jumbo', sc: 0.82 },
-    { id: 'bizjet', label: 'BIZJET', name: 'BUSINESS JET', model: 'bizjet', sc: 1.05 },
-    { id: 'turboprop', label: 'PROP', name: 'TURBOPROP', model: 'turboprop', sc: 0.95 },
+    { id: 'airliner', label: 'AIRLINER', name: 'AIRLINER', unlock: 0 },
+    { id: 'turboprop', label: 'PROP', name: 'TURBOPROP', unlock: 150 },
+    { id: 'bizjet', label: 'BIZJET', name: 'BUSINESS JET', unlock: 400 },
+    { id: 'jumbo', label: 'JUMBO', name: 'JUMBO JET', unlock: 800 },
+    { id: 'fighter', label: 'FIGHTER', name: 'FIGHTER JET', unlock: 1500 },
   ];
   const COLORS = [
-    { id: 'blue', name: 'Sky blue', c: '#3d7cc0' },
-    { id: 'red', name: 'Signal red', c: '#d0503c' },
-    { id: 'green', name: 'Pine green', c: '#3f8a5a' },
-    { id: 'orange', name: 'Sunset orange', c: '#e08a2c' },
-    { id: 'purple', name: 'Royal purple', c: '#7a5bb5' },
+    { id: 'blue', name: 'Navy', c: '#2b3f93' },
+    { id: 'red', name: 'Signal red', c: '#c8402f' },
+    { id: 'green', name: 'Pine green', c: '#2f7d4f' },
+    { id: 'orange', name: 'Sunset orange', c: '#e0822a' },
+    { id: 'purple', name: 'Royal purple', c: '#6c4bb0' },
     { id: 'charcoal', name: 'Charcoal', c: '#3a3f47' },
   ];
   const colorById = (id) => COLORS.find((c) => c.id === id) || null;
+  let boardBest = () => 0; // points at the board's saved best once the board exists
+  const bestEver = () => Math.max(hi, boardBest());
+  const isUnlocked = (p) => bestEver() >= p.unlock;
   const choice = {
     plane: PLANES.find((p) => p.id === store.get('skyline-glide-plane')) || PLANES[0],
     color: colorById(store.get('skyline-glide-color')) || COLORS[0],
   };
-  const playerModel = () => MODELS[choice.plane.model];
+  if (!isUnlocked(choice.plane)) choice.plane = PLANES[0];
+
+  // Each sprite is a grid of art pixels. L/D/E/O take the livery; '.' is empty.
+  // ps is the size of one art pixel in world units; (ax, ay) is the pivot.
+  const SPRITES = {
+    airliner: { ax: 22, ay: 12.5, ps: 1.25,
+      rows: [
+        '.DLL........................................',
+        '.DLLL.......................................',
+        '.DLLLL......................................',
+        '.DLLLLL.....................................',
+        '.DLLLLLL....................................',
+        '..DLLLLLL...................................',
+        '..DLLLLLLL..................................',
+        '..DLLLLLLLLL................................',
+        '..DLLLLLLLLLLL........AAAAA..K..............',
+        '..DLLLLLLLLLLLLWWWWWWWWWWWWWWWWWWWWW........',
+        '.WWWWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWOOOWW.....',
+        'AAAAAAAAWOWOWKWKWKWKWKWKWKWKWKWKWKOWOWCCW...',
+        '..GGGGGGGOWOWWWWWWWWWWWWWWWWWWWWWWOWOWWWWW..',
+        '....WWWWWOOOWWWWWWWWWWWWWWWWWWWWWWOOOWWWWWW.',
+        '.......SSSSSSSSSSSSSSSSSSSWWWWWWWWSSSSSSSSSS',
+        '..........LLLLLLLLLLLLAAAAAAAAAAGLLLLLLLLL..',
+        '.............LLLLLLAAAAAAAAAGEEEEEDLLL......',
+        '................AAAAAAAAAG...EEEEED.........',
+        '..............GGGGGGGG........EEEE..........',
+      ],
+      gear: [[22, 18, 'K'], [22, 19, 'K'], [24, 18, 'K'], [24, 19, 'K'], [38, 16, 'K'], [38, 17, 'K'], [38, 18, 'K'], [38, 19, 'K'], [21, 20, 'T'], [22, 20, 'T'], [24, 20, 'T'], [25, 20, 'T'], [37, 20, 'T'], [38, 20, 'T'], [39, 20, 'T'], [21, 21, 'T'], [22, 21, 'T'], [24, 21, 'T'], [25, 21, 'T'], [37, 21, 'T'], [38, 21, 'T'], [39, 21, 'T']] },
+    turboprop: { ax: 18, ay: 10, ps: 1.35,
+      rows: [
+        'LLLLLLL.................................',
+        '..LLLLL.................................',
+        '...LLLLL................................',
+        '...LLLLLL........................P......',
+        '....LLLLLL.......................P......',
+        '....LLLLLLL.............EEEEEEEEDP......',
+        '.....LLLLLLL...AAAAAAAAAEEEEEEEEDP......',
+        '.....LLLLLLLLLWWWWWWWWWWWWWWWWWWWP......',
+        '....WWWWWWWWWWWWWWWWWWWWWWWWWWWWWPWW....',
+        '...WWWWWKWKWKWKWKWKWKWKWKWKWKWKWWPCCW...',
+        '....WWWWWWWWWWWWWWWWWWWWWWWWWWWWWPWWW...',
+        '......SSSSSSSSSSSSSSSSSSSSSSSSSSSPSS....',
+        '........LLLLLLLLLLLLLLLLLLLLLLLLLLL.....',
+        '...........LLLLLLGGGGGGGLLLLLLLL........',
+      ],
+      gear: [[20, 14, 'K'], [20, 15, 'K'], [31, 13, 'K'], [31, 14, 'K'], [31, 15, 'K'], [19, 16, 'T'], [20, 16, 'T'], [21, 16, 'T'], [30, 16, 'T'], [31, 16, 'T'], [32, 16, 'T'], [19, 17, 'T'], [20, 17, 'T'], [21, 17, 'T'], [30, 17, 'T'], [31, 17, 'T'], [32, 17, 'T']] },
+    bizjet: { ax: 17, ay: 8.5, ps: 1.35,
+      rows: [
+        'LLLLLL............................',
+        '.LLLL.............................',
+        '..LLLL............................',
+        '..LLLLL...........................',
+        '...LLLLEEEEEED....................',
+        '...LLLLEEEEEED....................',
+        '...LLLLLLWWWWWWWWWWWWWWWWWWWW.....',
+        '..WWWWWWWWWWWWWWWWWWWWWWWWWWWWW...',
+        '..WWWWWWWWWKWKWKWKWKWKWWWWWCCWWW..',
+        '...WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW.',
+        '.....SSSSSSSSGGGGGGGSSSSSSSSSSS...',
+        '........LLLAAAAAAAALLLLLLLLLL.....',
+        '..........GGGGG...................',
+      ],
+      gear: [[17, 12, 'K'], [17, 13, 'K'], [28, 12, 'K'], [28, 13, 'K'], [16, 14, 'T'], [17, 14, 'T'], [18, 14, 'T'], [27, 14, 'T'], [28, 14, 'T'], [29, 14, 'T'], [16, 15, 'T'], [17, 15, 'T'], [18, 15, 'T'], [27, 15, 'T'], [28, 15, 'T'], [29, 15, 'T']] },
+    jumbo: { ax: 26, ay: 12.5, ps: 1.15,
+      rows: [
+        '.LLLL...............................................',
+        '.LLLLL..............................................',
+        '.LLLLLL.............................................',
+        '.LLLLLLL............................................',
+        '..LLLLLLL...........................................',
+        '..LLLLLLLL..........................................',
+        '..LLLLLLLLL.......................WWWWWWWW..........',
+        '..LLLLLLLLLLL..................WWWWWWWWWWWWWW.......',
+        '..LLLLLLLLLLLLL.............WWWKWKWKWKWKWWWWCCW.....',
+        '..DLLLLLLLLLLLLLLWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW....',
+        '.WWWWWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOOOWWWWW..',
+        'GGGGGGGGGWOWOWKWKWKWKWKWKWKWKWKWKWKWKWKWKWOWOWWWWWW.',
+        '..GGGGGGGGOWOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOWOWWWWWWW',
+        '....WWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOOOWWWWWWW',
+        '.......SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS.',
+        '.........LLLLLLLLLLLLLGGGGGGGGGGLLLLLLLLLLLLLLLLL...',
+        '............LLLLLLAAAAAAAAAAAAEEEEEELLLLLLLLLL......',
+        '...............AAAAAAAAAAAAA..EEEEEED...............',
+        '..............GGGEEEEED.......EEEEEE................',
+        '.................EEEEED.............................',
+      ],
+      gear: [[27, 18, 'K'], [27, 19, 'K'], [27, 20, 'K'], [45, 17, 'K'], [45, 18, 'K'], [45, 19, 'K'], [45, 20, 'K'], [25, 21, 'T'], [26, 21, 'T'], [27, 21, 'T'], [28, 21, 'T'], [29, 21, 'T'], [44, 21, 'T'], [45, 21, 'T'], [46, 21, 'T'], [25, 22, 'T'], [26, 22, 'T'], [27, 22, 'T'], [28, 22, 'T'], [29, 22, 'T'], [44, 22, 'T'], [45, 22, 'T'], [46, 22, 'T']] },
+    fighter: { ax: 18, ay: 6.5, ps: 1.3,
+      rows: [
+        '..LLL...............................',
+        '..LLLL..............................',
+        '...LLLL.............................',
+        '...LLLLL............................',
+        '....LLLLL...........CCCC............',
+        '....LLLLLLMMMMMMMMMCCCCCCMMM........',
+        'FFYMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...',
+        '.FYMMMMMMMMMMMMKKKMMMMMMMMMMMMMMMMM.',
+        '...SSSSSAAAAAAAAAAAAASSSSSSSSS......',
+        '......GGGGGGGGGGGGGG................',
+        '.....GGGGG..........................',
+      ],
+      gear: [[16, 10, 'K'], [28, 9, 'K'], [28, 10, 'K'], [15, 11, 'T'], [16, 11, 'T'], [17, 11, 'T'], [27, 11, 'T'], [28, 11, 'T'], [29, 11, 'T'], [15, 12, 'T'], [16, 12, 'T'], [17, 12, 'T'], [27, 12, 'T'], [28, 12, 'T'], [29, 12, 'T']] },
+  };
+  const PIX = { W: '#ffffff', S: '#dde2e8', A: '#eef1f5', G: '#b7bec7', K: '#3b4049', C: '#26314d', T: '#2a2a2a',
+                M: '#a7aeb6', F: '#f39a2b', Y: '#ffe08a', P: 'rgba(120,126,136,0.55)' };
+  const darken = (hex, f) => { const [r, g, b] = hexRgb(hex); return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`; };
+  for (const sp of Object.values(SPRITES)) {
+    sp.w = sp.rows[0].length; sp.h = sp.rows.length;
+    // solid pixels (the prop blur doesn't count) and their outline, for pixel-accurate collisions
+    sp.solid = sp.rows.map((r) => [...r].map((ch) => ch !== '.' && ch !== 'P'));
+    const on = (x, y) => y >= 0 && y < sp.h && x >= 0 && x < sp.w && sp.solid[y][x];
+    sp.edge = [];
+    for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) {
+      if (on(x, y) && !(on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1))) sp.edge.push([(x + 0.5 - sp.ax) * sp.ps, (y + 0.5 - sp.ay) * sp.ps]);
+    }
+    sp.top = sp.ay * sp.ps; sp.bottom = (sp.h - sp.ay) * sp.ps;
+  }
+  const spriteCache = new Map();
+  function spriteCanvas(id, hex, gear, frame) {
+    const key = `${id}|${hex}|${gear ? 1 : 0}|${frame}`;
+    let c = spriteCache.get(key);
+    if (c) return c;
+    const sp = SPRITES[id];
+    const grid = sp.rows.map((r) => [...r]);
+    if (gear) for (const [x, y, ch] of sp.gear) { while (grid.length <= y) grid.push(Array(sp.w).fill('.')); grid[y][x] = ch; }
+    let pal = Object.assign({}, PIX, hex ? { L: hex, E: hex, O: hex, D: darken(hex, 0.7) } : {});
+    if (frame) Object.assign(pal, { P: 'rgba(120,126,136,0.25)', F: PIX.Y, Y: PIX.F });
+    // no livery means a locked plane: draw a flat silhouette
+    if (!hex) pal = new Proxy({}, { get: () => 'rgba(120,126,136,0.45)' });
+    c = document.createElement('canvas');
+    c.width = sp.w; c.height = grid.length;
+    const g = c.getContext('2d');
+    grid.forEach((r, y) => r.forEach((ch, x) => { if (ch !== '.') { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
+    spriteCache.set(key, c);
+    return c;
+  }
+  function drawSprite(id, x, y, ang, scale, hex, gear) {
+    const sp = SPRITES[id], c = spriteCanvas(id, hex, gear, Math.floor(t * 16) % 2);
+    const ps = sp.ps * scale;
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(ang);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, -sp.ax * ps, -sp.ay * ps, c.width * ps, c.height * ps);
+    ctx.restore();
+  }
+  const playerSprite = () => SPRITES[choice.plane.id];
+  function playerEdge() {
+    const c = Math.cos(player.angle), s = Math.sin(player.angle);
+    return playerSprite().edge.map(([lx, ly]) => [px + lx * c - ly * s, player.y + lx * s + ly * c]);
+  }
+  // Is a world point inside one of the player's solid pixels?
+  function playerCovers(wx, wy) {
+    const sp = playerSprite(), c = Math.cos(-player.angle), s = Math.sin(-player.angle);
+    const dx = wx - px, dy = wy - player.y;
+    const gx = Math.floor((dx * c - dy * s) / sp.ps + sp.ax), gy = Math.floor((dx * s + dy * c) / sp.ps + sp.ay);
+    return gy >= 0 && gy < sp.h && gx >= 0 && gx < sp.w && sp.solid[gy][gx];
+  }
+  function pointInPoly(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
 
   // Oncoming traffic by era: each unlocks at a score and is faster and more aggressive than the last.
   const TRAFFIC = [
@@ -901,6 +1078,7 @@
     } catch (e) { return []; }
   }
   Board.rows = loadLocalRows();
+  boardBest = () => Board.best;
 
   function renderBoard() {
     boardScope.textContent = Board.mode === 'local' ? 'THIS DEVICE' : 'GLOBAL · ALL TIME';
@@ -972,6 +1150,7 @@
           const v = mine.data() || {};
           Board.best = cleanScore(v.score);
           if (!Board.name) Board.name = cleanName(v.name);
+          if (state === 'ready') renderHangar();
         }
       } catch (e) { /* keep defaults */ }
     }
@@ -1063,15 +1242,19 @@
 
   // ---------- hangar ----------
   const hangarEl = $('hangar'), resultEl = $('result'), flyBtn = $('flyBtn'), homeBtn = $('homeBtn');
-  const chipsEl = $('planeChips'), swatchesEl = $('swatches');
+  const swatchesEl = $('swatches');
+  let viewIdx = PLANES.indexOf(choice.plane); // the plane shown in the hangar, which may still be locked
   const pv = $('preview'), pctx = pv.getContext('2d');
-  for (const p of PLANES) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'chip'; b.textContent = p.label; b.dataset.id = p.id;
-    b.setAttribute('aria-label', p.name);
-    b.addEventListener('click', () => { choice.plane = p; store.set('skyline-glide-plane', p.id); renderHangar(); });
-    chipsEl.appendChild(b);
+  function viewPlane(step) {
+    viewIdx = (viewIdx + step + PLANES.length) % PLANES.length;
+    const p = PLANES[viewIdx];
+    if (isUnlocked(p)) { choice.plane = p; store.set('skyline-glide-plane', p.id); }
+    renderHangar();
   }
+  $('prevPlane').addEventListener('click', () => viewPlane(-1));
+  $('nextPlane').addEventListener('click', () => viewPlane(1));
+  const pipsEl = $('pips');
+  for (let i = 0; i < PLANES.length; i++) pipsEl.appendChild(document.createElement('span'));
   for (const c of COLORS) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'swatch'; b.dataset.id = c.id;
@@ -1081,26 +1264,35 @@
     swatchesEl.appendChild(b);
   }
   function renderHangar() {
-    for (const b of chipsEl.children) b.setAttribute('aria-pressed', String(b.dataset.id === choice.plane.id));
+    const view = PLANES[viewIdx], open = isUnlocked(view);
+    $('pickName').textContent = view.name;
+    const st = $('pickStatus');
+    st.textContent = open ? 'READY TO FLY' : `LOCKED · SCORE ${view.unlock}`;
+    st.classList.toggle('locked', !open);
+    [...pipsEl.children].forEach((el, i) => { el.className = (i === viewIdx ? 'on ' : '') + (isUnlocked(PLANES[i]) ? '' : 'locked'); });
+    flyBtn.disabled = !open;
+    if (state === 'ready') flyBtn.textContent = open ? 'FLY' : 'LOCKED';
+    const next = PLANES.find((p) => !isUnlocked(p));
+    $('unlockHint').textContent = next ? `NEXT PLANE AT ${next.unlock} PTS · YOUR BEST ${pad(bestEver())}` : 'ALL PLANES UNLOCKED';
     for (const b of swatchesEl.children) b.setAttribute('aria-pressed', String(b.dataset.id === choice.color.id));
-    $('planeName').textContent = choice.plane.name;
+    $('planeName').textContent = `${PLANES.filter(isUnlocked).length}/${PLANES.length} UNLOCKED`;
   }
   function drawPreview() {
     const w = pv.clientWidth, h = pv.clientHeight;
     if (!w || !h) return;
     if (pv.width !== Math.round(w * dpr) || pv.height !== Math.round(h * dpr)) { pv.width = Math.round(w * dpr); pv.height = Math.round(h * dpr); }
-    const m = playerModel();
-    const sc = Math.min(w / 84, h / (m.top + m.bottom + 6));
+    const view = PLANES[viewIdx], sp = SPRITES[view.id], gh = sp.h + 4;
+    // whole device pixels per art pixel keeps the preview crisp
+    const art = Math.max(1, Math.floor(Math.min(w * dpr * 0.8 / sp.w, h * dpr * 0.92 / gh)));
     ctx = pctx;
-    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    pctx.clearRect(0, 0, w, h);
-    const cy = h / 2 + (m.top - m.bottom) / 2 * sc + Math.sin(t * 2.4) * 2;
-    ctx.fillStyle = P.mid;
-    for (let i = 1; i <= 5; i++) { ctx.globalAlpha = 0.6 - i * 0.1; ctx.fillRect(w / 2 - 36 * sc - i * 7, cy + 2 * sc - 1, 2, 2); }
-    ctx.globalAlpha = 1;
-    drawModel(m, w / 2, cy, Math.cos(t * 2.4) * -0.04, 1, sc, choice.color.c, 3);
+    pctx.setTransform(1, 0, 0, 1, 0, 0);
+    pctx.clearRect(0, 0, pv.width, pv.height);
+    const x = Math.round((pv.width - sp.w * art) / 2 + sp.ax * art);
+    const y = Math.round((pv.height - gh * art) / 2 + sp.ay * art + Math.round(Math.sin(t * 2.4) * 1.5) * art / 2);
+    drawSprite(view.id, x, y, 0, art / sp.ps, isUnlocked(view) ? choice.color.c : null, true);
     ctx = mainCtx;
   }
+
 
   // ---------- game flow ----------
   function reset() {
@@ -1124,7 +1316,7 @@
     if (fuel <= 0) { fuel = 0; fuelOut = true; }
     sfx.flap();
   }
-  function launch() { audio(); reset(); start(); flap(); }
+  function launch() { viewIdx = PLANES.indexOf(choice.plane); audio(); reset(); start(); flap(); }
   function press() {
     if (state === 'ready' || (state === 'over' && overT >= 0.5)) return launch();
     if (state === 'playing') flap();
@@ -1135,8 +1327,8 @@
     shownScore = -1;
     ovTitle.textContent = 'SKYLINE GLIDE';
     ovSub.textContent = 'TAP ANYWHERE TO FLY · HOLD TO CLIMB';
-    hangarEl.hidden = false; resultEl.hidden = true;
-    homeBtn.hidden = true; flyBtn.textContent = 'FLY';
+    hangarEl.hidden = false; resultEl.hidden = true; $('unlockMsg').hidden = true;
+    homeBtn.hidden = true; flyBtn.textContent = 'FLY'; flyBtn.disabled = false;
     hint.hidden = !portrait;
     fuelEl.hidden = true;
     overlay.hidden = false;
@@ -1147,7 +1339,7 @@
     ovSub.textContent = 'TAP ANYWHERE TO FLY AGAIN';
     $('finalScore').textContent = pad(score);
     hangarEl.hidden = true; resultEl.hidden = false;
-    homeBtn.hidden = false; flyBtn.textContent = 'FLY AGAIN';
+    homeBtn.hidden = false; flyBtn.textContent = 'FLY AGAIN'; flyBtn.disabled = false;
     hint.hidden = true;
     fuelEl.hidden = true;
     overlay.hidden = false;
@@ -1162,8 +1354,13 @@
       const a = rand(0, TAU), v = rand(15, 60);
       puffs.push({ x: px + rand(-6, 16), y: player.y + rand(-6, 6), vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, r: rand(3, 7), life: 1 });
     }
+    const before = bestEver();
     if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
     hiEl.textContent = 'HI ' + pad(hi);
+    const fresh = PLANES.filter((p) => p.unlock > before && p.unlock <= score);
+    const unlockMsg = $('unlockMsg');
+    unlockMsg.hidden = !fresh.length;
+    unlockMsg.textContent = fresh.length ? `UNLOCKED: ${fresh.map((p) => p.name).join(', ')}! PICK IT IN THE HANGAR.` : '';
     showOver();
   }
 
@@ -1279,16 +1476,21 @@
     if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; }
 
     // collisions
-    const poly = modelPoly(playerModel(), px, player.y, player.angle, 1, choice.plane.sc);
-    for (const p of poly) if (p[1] >= groundY) return crash();
+    // The player's outline pixels against towers, ground and traffic, so hits match what you see.
+    const edge = playerEdge();
+    for (const p of edge) if (p[1] >= groundY) return crash();
     for (const c of clusters) {
-      if (c.x > px + 40 || c.x + c.width < px - 40) continue;
+      if (c.x > px + 50 || c.x + c.width < px - 50) continue;
       const y0 = groundY - c.hf * playH;
-      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) if (polyHitsRect(poly, r)) return crash();
+      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) {
+        for (const p of edge) if (p[0] >= r[0] && p[0] <= r[0] + r[2] && p[1] >= r[1] && p[1] <= r[1] + r[3]) return crash();
+      }
     }
     for (const e of enemies) {
-      if (Math.abs(e.x - px) > 70 || Math.abs(e.y - player.y) > 45) continue;
-      if (polyHitsPoly(poly, modelPoly(e.m, e.x, e.y, 0, -1, e.sc))) return crash();
+      if (Math.abs(e.x - px) > 75 || Math.abs(e.y - player.y) > 45) continue;
+      const poly = modelPoly(e.m, e.x, e.y, 0, -1, e.sc);
+      for (const p of edge) if (pointInPoly(p[0], p[1], poly)) return crash();
+      for (const q of poly) if (playerCovers(q[0], q[1])) return crash();
     }
   }
 
@@ -1370,7 +1572,7 @@
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
     ctx.globalAlpha = 1;
-    drawModel(playerModel(), px, player.y, player.angle, 1, choice.plane.sc, choice.color.c, 7);
+    drawSprite(choice.plane.id, px, player.y, player.angle, 1, choice.color.c, false);
 
     for (const p of puffs) {
       ctx.globalAlpha = Math.max(0, p.life);
