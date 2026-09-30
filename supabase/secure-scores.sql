@@ -9,11 +9,15 @@
 --     (top speed caps scoring at about 21 points per second).
 --   • Per-IP rate limits: 20 run starts and 5 score submissions per minute.
 --   • The board keeps the best 1,000 scores; old run tokens are cleared after a day.
+--   • Scores from signed-in players record their account (never shown publicly).
 
 -- 1. Readers keep read access; direct writes are closed.
 drop policy if exists "anyone can add a score" on public.scores;
 revoke insert, update, delete, truncate on public.scores from anon, authenticated;
-grant select on public.scores to anon, authenticated;
+alter table public.scores add column if not exists user_id uuid references auth.users (id) on delete set null;
+-- readers see names and scores only, not which account posted them
+revoke select on public.scores from anon, authenticated;
+grant select (id, name, score, created_at) on public.scores to anon, authenticated;
 
 -- 2. Run tokens. Row-level security with no policies: only the functions below can touch this table.
 create table if not exists public.runs (
@@ -109,7 +113,7 @@ begin
   end if;
 
   update public.runs set submitted_at = now(), score = p_score where id = p_run;
-  insert into public.scores (name, score) values (v_name, p_score);
+  insert into public.scores (name, score, user_id) values (v_name, p_score, auth.uid());
 
   -- tidy up now and then instead of on a schedule
   if random() < 0.02 then

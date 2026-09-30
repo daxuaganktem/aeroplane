@@ -230,6 +230,32 @@
     pointer-events: none; z-index: 5;
   }
   #toast.gold { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold) inset; }
+  #account {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    left: calc(env(safe-area-inset-left, 0px) + 58px);
+    max-width: 44vw;
+    padding: 7px 10px;
+    border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--sky); color: var(--ink);
+    font: clamp(8px, 2.2vw, 10px)/1 var(--pixel); letter-spacing: 0.06em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  #account.on::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; background: #3f9a5a; vertical-align: 0; }
+  #account:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #accountModal {
+    position: fixed; inset: 0; z-index: 6;
+    display: grid; place-items: center;
+    padding: 16px; box-sizing: border-box;
+    background: rgba(20, 24, 32, 0.4);
+  }
+  #accountCard { width: min(100%, 380px); max-height: 100%; }
+  #accountBody { display: grid; gap: 12px; }
+  #accountBody p { margin: 0; line-height: 1.8; }
+  #accountBody .small { opacity: 0.7; font-size: 0.9em; }
+  #accountBody .err { color: var(--warn); }
+  #accountBody .px { width: 100%; min-height: 42px; }
   .blink { animation: blink 0.25s steps(1) 4; }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes pulse { 50% { opacity: 0.35; } }
@@ -248,6 +274,13 @@
   </svg>
 </button>
 <div id="toast" role="status" aria-live="polite" hidden></div>
+<button id="account" type="button" hidden aria-haspopup="dialog">SIGN IN</button>
+<div id="accountModal" hidden>
+  <section class="card" id="accountCard" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+    <div class="cardHead"><span id="accountTitle">PILOT ACCOUNT</span><button class="link" id="accountClose" type="button">CLOSE</button></div>
+    <div id="accountBody"></div>
+  </section>
+</div>
 <div id="fuel" hidden><span id="fuelLabel">FUEL</span><div id="fuelBar"><div id="fuelFill"></div></div></div>
 <div id="overlay">
   <div id="ovHead">
@@ -1328,9 +1361,10 @@
   // Supabase calls. Scores go through start_run / submit_score, which check each run on the server
   // (see supabase/secure-scores.sql); the key travels only in the apikey header.
   async function rpc(name, body) {
+    await ensureFresh();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST',
-      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      headers: sbHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body || {}),
     });
     if (!res.ok) {
@@ -1409,7 +1443,7 @@
     if (saving) return;
     saving = true; saveBtn.disabled = true;
     const prevName = Board.name;
-    Board.name = name; store.set('skyline-glide-name', name);
+    Board.name = name; store.set('skyline-glide-name', name); queueSync();
     try {
       if (Board.mode === 'db') {
         await Board.db.doc('scores/' + Board.myId).set({ name, score: value, at: Date.now(), plane: choice.plane.id, color: choice.color.id });
@@ -1459,7 +1493,7 @@
     nameIn.blur();
     if (pendingScore) submitScore(name, pendingScore);
     else if (Board.best && Board.mode !== 'remote') submitScore(name, Board.best);
-    else { Board.name = name; store.set('skyline-glide-name', name); showSaved(name); renderBoard(); }
+    else { Board.name = name; store.set('skyline-glide-name', name); queueSync(); showSaved(name); renderBoard(); }
   });
   $('editName').addEventListener('click', () => {
     savedBox.hidden = true;
@@ -1492,7 +1526,7 @@
   function viewPlane(step) {
     viewIdx = (viewIdx + step + PLANES.length) % PLANES.length;
     const p = PLANES[viewIdx];
-    if (isUnlocked(p)) { choice.plane = p; store.set('skyline-glide-plane', p.id); }
+    if (isUnlocked(p)) { choice.plane = p; store.set('skyline-glide-plane', p.id); queueSync(); }
     renderHangar();
   }
   $('prevPlane').addEventListener('click', () => viewPlane(-1));
@@ -1504,7 +1538,7 @@
     b.type = 'button'; b.className = 'swatch'; b.dataset.id = c.id;
     b.style.setProperty('--c', c.c);
     b.setAttribute('aria-label', c.name);
-    b.addEventListener('click', () => { choice.color = c; store.set('skyline-glide-color', c.id); renderHangar(); });
+    b.addEventListener('click', () => { choice.color = c; store.set('skyline-glide-color', c.id); queueSync(); renderHangar(); });
     swatchesEl.appendChild(b);
   }
   function renderHangar() {
@@ -1552,7 +1586,7 @@
   // ---------- achievements and daily challenges ----------
   const loadJSON = (key, fallback) => { try { return Object.assign(fallback, JSON.parse(store.get(key)) || {}); } catch (e) { return fallback; } };
   const stats = loadJSON('skyline-glide-stats', { runs: 0, total: 0, nightfalls: 0, sunrises: 0, landmarks: {}, types: {}, dailyDone: 0, dailySweeps: 0, got: {} });
-  const saveStats = () => store.set('skyline-glide-stats', JSON.stringify(stats));
+  const saveStats = () => { store.set('skyline-glide-stats', JSON.stringify(stats)); queueSync(); };
   let run = null, progTimer = 0; // this flight's counters
   const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false });
   const count = (o) => Object.keys(o).length;
@@ -1640,7 +1674,7 @@
         saveStats(); checkAchievements();
       }
     });
-    if (changed) store.set('skyline-glide-daily', JSON.stringify({ date: d.date, prog: d.prog, done: d.done }));
+    if (changed) { store.set('skyline-glide-daily', JSON.stringify({ date: d.date, prog: d.prog, done: d.done })); queueSync(); }
   }
 
   // events from the game
@@ -1736,6 +1770,197 @@
     }
   }
 
+  // ---------- accounts: optional sign-in that saves progress to Supabase ----------
+  // Google sign-in through Supabase Auth, handled with plain fetch calls. Only offered where the
+  // Supabase board is in use (the GitHub Pages build), never inside claude.ai.
+  // To offer GitHub too, enable it in Supabase and add { id: 'github', label: 'CONTINUE WITH GITHUB' }.
+  const AUTH_PROVIDERS = [{ id: 'google', label: 'CONTINUE WITH GOOGLE' }];
+  const SESSION_KEY = 'skyline-glide-session';
+  const Auth = { session: null, user: null, lastSync: 0, syncing: false, error: '' };
+  const accountBtn = $('account'), accountModal = $('accountModal'), accountBody = $('accountBody');
+  const authAvailable = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY) && Board.mode === 'remote'
+    && /^https?:$/.test(location.protocol) && !(window.claude && typeof window.claude.use === 'function');
+
+  // Signed in, requests carry the player's token; otherwise only the publishable key.
+  function sbHeaders(extra) {
+    const h = { apikey: SUPABASE_ANON_KEY };
+    if (Auth.session) h.Authorization = `Bearer ${Auth.session.access_token}`;
+    return Object.assign(h, extra || {});
+  }
+  async function authFetch(path, opts) {
+    const o = opts || {};
+    const res = await fetch(`${SUPABASE_URL}${path}`, Object.assign({}, o, { headers: sbHeaders(o.headers) }));
+    if (!res.ok) throw { status: res.status };
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+  function saveSession(s) {
+    Auth.session = s;
+    if (s) store.set(SESSION_KEY, JSON.stringify(s)); else { try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* storage unavailable */ } }
+  }
+  // Renew the player's token shortly before it expires. A refused renewal signs the player out on this device.
+  async function ensureFresh() {
+    const s = Auth.session;
+    if (!s || s.expires_at - Date.now() / 1000 > 60) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      });
+      if (res.status === 400 || res.status === 401) { signOutLocal('Your sign-in expired. Sign in again to keep saving progress.'); return; }
+      if (!res.ok) return;
+      const j = await res.json();
+      saveSession({ access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || Date.now() / 1000 + (j.expires_in || 3600) });
+      if (j.user) Auth.user = j.user;
+    } catch (e) { /* offline: keep the old token and try again later */ }
+  }
+  // After Google sends the player back, the tokens arrive in the address bar's #fragment.
+  function readRedirect() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const clean = () => history.replaceState(null, '', location.pathname + location.search);
+    if (h.get('access_token')) {
+      clean();
+      return { access_token: h.get('access_token'), refresh_token: h.get('refresh_token'),
+               expires_at: Number(h.get('expires_at')) || Date.now() / 1000 + Number(h.get('expires_in') || 3600) };
+    }
+    if (h.get('error')) { Auth.error = `Sign-in didn't finish: ${h.get('error_description') || h.get('error')}.`; clean(); }
+    return null;
+  }
+  async function initAuth() {
+    if (!authAvailable()) return;
+    accountBtn.hidden = state === 'playing';
+    let s = readRedirect(), fresh = !!s;
+    if (!s) { try { s = JSON.parse(store.get(SESSION_KEY)); } catch (e) { s = null; } }
+    if (!s || !s.access_token) { renderAccount(); if (Auth.error) openAccount(); return; }
+    saveSession(s);
+    try {
+      await ensureFresh();
+      if (!Auth.session) return;
+      Auth.user = await authFetch('/auth/v1/user');
+      await pullProgress();
+      if (fresh) toast('SIGNED IN · PROGRESS SAVED TO YOUR ACCOUNT');
+    } catch (e) {
+      if (e && e.status === 401) signOutLocal('Your sign-in expired. Sign in again to keep saving progress.');
+      else Auth.error = "Couldn't reach your account. Your progress is safe on this device and will sync later.";
+    }
+    renderAccount();
+  }
+  function signIn(provider) {
+    const back = location.origin + location.pathname;
+    location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(back)}`;
+  }
+  function signOutLocal(message) {
+    saveSession(null); Auth.user = null; Auth.error = message || '';
+    renderAccount();
+  }
+  async function signOut() {
+    await pushProgress();
+    try { await authFetch('/auth/v1/logout', { method: 'POST' }); } catch (e) { /* the token lapses on its own */ }
+    signOutLocal('');
+    toast('SIGNED OUT · PROGRESS STAYS ON THIS DEVICE TOO');
+  }
+
+  // What gets saved to the account.
+  function progressSnapshot() {
+    const d = dailyToday();
+    return { v: 1, stats, hi, best: Board.best, plane: choice.plane.id, color: choice.color.id,
+             daily: { date: d.date, prog: d.prog, done: d.done } };
+  }
+  // Combine the account's progress with this device's: counters keep the higher value, achievements keep
+  // the earliest date earned, today's challenges keep the furthest progress.
+  function mergeProgress(cloud) {
+    if (!cloud || typeof cloud !== 'object') return;
+    const cs = cloud.stats || {}, num = (v) => (Number.isFinite(Number(v)) ? Math.max(0, Math.floor(Number(v))) : 0);
+    for (const k of ['runs', 'total', 'nightfalls', 'sunrises', 'dailyDone', 'dailySweeps']) stats[k] = Math.max(stats[k] || 0, num(cs[k]));
+    for (const id of Object.keys(LANDMARKS)) if (cs.landmarks && cs.landmarks[id]) stats.landmarks[id] = Math.max(stats.landmarks[id] || 0, num(cs.landmarks[id]));
+    for (const tr of TRAFFIC) if (cs.types && cs.types[tr.id]) stats.types[tr.id] = Math.max(stats.types[tr.id] || 0, num(cs.types[tr.id]));
+    for (const a of ACHIEVEMENTS) {
+      const ts = cs.got && num(cs.got[a.id]);
+      if (ts) stats.got[a.id] = stats.got[a.id] ? Math.min(stats.got[a.id], ts) : ts;
+    }
+    store.set('skyline-glide-stats', JSON.stringify(stats));
+    const cHi = cleanScore(cloud.hi);
+    if (cHi > hi) { hi = cHi; store.set('skyline-glide-hi', String(hi)); hiEl.textContent = 'HI ' + pad(hi); }
+    const cBest = cleanScore(cloud.best);
+    if (cBest > Board.best && Board.mode !== 'db') { Board.best = cBest; store.set('skyline-glide-saved', String(cBest)); }
+    const d = dailyToday(), cd = cloud.daily;
+    if (cd && cd.date === d.date && Array.isArray(cd.prog) && Array.isArray(cd.done)) {
+      d.tasks.forEach((task, i) => { d.prog[i] = Math.min(task.target, Math.max(d.prog[i], num(cd.prog[i]))); d.done[i] = d.done[i] || !!cd.done[i]; });
+      store.set('skyline-glide-daily', JSON.stringify({ date: d.date, prog: d.prog, done: d.done }));
+    }
+    const plane = PLANES.find((q) => q.id === cloud.plane), color = colorById(cloud.color);
+    if (plane && isUnlocked(plane)) { choice.plane = plane; viewIdx = PLANES.indexOf(plane); store.set('skyline-glide-plane', plane.id); }
+    if (color) { choice.color = color; store.set('skyline-glide-color', color.id); }
+  }
+  async function pullProgress() {
+    const rows = await authFetch(`/rest/v1/profiles?select=name,progress&user_id=eq.${encodeURIComponent(Auth.user.id)}`);
+    const row = rows && rows[0];
+    if (row) {
+      mergeProgress(row.progress);
+      const n = cleanName(row.name);
+      if (n && !Board.name) { Board.name = n; store.set('skyline-glide-name', n); }
+    }
+    checkAchievements();
+    await pushProgress();
+    if (state === 'ready') { renderHangar(); setTab(activeTab); }
+  }
+  let syncTimer = 0;
+  function queueSync(now) {
+    if (!Auth.session || !Auth.user) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushProgress, now ? 0 : 3000);
+  }
+  async function pushProgress() {
+    if (!Auth.session || !Auth.user) return;
+    clearTimeout(syncTimer);
+    Auth.syncing = true; renderAccount();
+    try {
+      await ensureFresh();
+      if (!Auth.session) return;
+      await authFetch('/rest/v1/profiles?on_conflict=user_id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ user_id: Auth.user.id, name: Board.name || null, progress: progressSnapshot(), updated_at: new Date().toISOString() }),
+      });
+      Auth.lastSync = Date.now(); Auth.error = '';
+    } catch (e) {
+      Auth.error = "Couldn't save to your account just now. It will try again after your next run.";
+    } finally {
+      Auth.syncing = false; renderAccount();
+    }
+  }
+
+  // The account button and dialog.
+  function openAccount() { renderAccount(); accountModal.hidden = false; $('accountClose').focus(); }
+  function closeAccount() { accountModal.hidden = true; if (!accountBtn.hidden) accountBtn.focus(); }
+  accountBtn.addEventListener('click', openAccount);
+  $('accountClose').addEventListener('click', closeAccount);
+  accountModal.addEventListener('click', (e) => { if (e.target === accountModal) closeAccount(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !accountModal.hidden) closeAccount(); });
+  function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function renderAccount() {
+    const signedIn = !!(Auth.session && Auth.user);
+    const email = signedIn ? String(Auth.user.email || '') : '';
+    accountBtn.classList.toggle('on', signedIn);
+    accountBtn.textContent = signedIn ? (Board.name || email.split('@')[0].toUpperCase() || 'PILOT').slice(0, 12) : 'SIGN IN';
+    accountBtn.setAttribute('aria-label', signedIn ? `Account: signed in as ${email || 'pilot'}` : 'Sign in to save your progress');
+    accountBody.textContent = '';
+    if (signedIn) {
+      accountBody.append(el('p', 'small', 'SIGNED IN AS'), el('p', '', email || 'PILOT'));
+      const when = Auth.syncing ? 'Saving…' : Auth.lastSync ? (Date.now() - Auth.lastSync < 60000 ? 'Progress saved just now.' : `Progress saved ${Math.round((Date.now() - Auth.lastSync) / 60000)} min ago.`) : 'Progress will save after your next run.';
+      accountBody.append(el('p', 'small', `${when} Achievements, unlocked planes, your best score and today's challenges follow you to any device you sign in on.`));
+      if (Auth.error) accountBody.append(el('p', 'err', Auth.error));
+      const sync = el('button', 'px ghost', 'SAVE NOW'); sync.type = 'button'; sync.addEventListener('click', () => pushProgress());
+      const out = el('button', 'px', 'SIGN OUT'); out.type = 'button'; out.addEventListener('click', () => signOut());
+      accountBody.append(sync, out);
+    } else {
+      accountBody.append(el('p', '', 'Sign in to keep your achievements, unlocked planes, best score and daily challenges on every device.'));
+      accountBody.append(el('p', 'small', "Progress from this device is added to your account. Your email is never shown on the board."));
+      if (Auth.error) accountBody.append(el('p', 'err', Auth.error));
+      for (const pv of AUTH_PROVIDERS) { const b = el('button', 'px', pv.label); b.type = 'button'; b.addEventListener('click', () => signIn(pv.id)); accountBody.append(b); }
+    }
+  }
+
   // ---------- game flow ----------
   function reset() {
     clusters = []; enemies = []; puffs = []; trail = [];
@@ -1748,7 +1973,7 @@
   }
   function start() {
     state = 'playing';
-    overlay.hidden = true; fuelEl.hidden = false;
+    overlay.hidden = true; fuelEl.hidden = false; accountBtn.hidden = true;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
   function flap() {
@@ -1779,7 +2004,7 @@
     homeBtn.hidden = true; flyBtn.textContent = 'FLY'; flyBtn.disabled = false;
     hint.hidden = !portrait;
     fuelEl.hidden = true;
-    overlay.hidden = false;
+    overlay.hidden = false; accountBtn.hidden = !authAvailable();
     renderHangar(); renderBoard(); setTab(activeTab);
   }
   function showOver() {
@@ -1790,7 +2015,7 @@
     homeBtn.hidden = false; flyBtn.textContent = 'FLY AGAIN'; flyBtn.disabled = false;
     hint.hidden = true;
     fuelEl.hidden = true;
-    overlay.hidden = false;
+    overlay.hidden = false; accountBtn.hidden = !authAvailable();
     showBoardAfterRun(score);
     renderTabs();
   }
@@ -1808,6 +2033,7 @@
     if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
     hiEl.textContent = 'HI ' + pad(hi);
     onRunEnd(score);
+    queueSync(true);
     const fresh = PLANES.filter((p) => p.unlock > before && p.unlock <= score);
     const unlockMsg = $('unlockMsg');
     unlockMsg.hidden = !fresh.length;
@@ -2056,7 +2282,7 @@
 
   // ---------- input ----------
   // Taps on the menu cards stay with the cards; a tap anywhere else flies.
-  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute, .card');
+  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute, .card, #account, #accountModal');
   window.addEventListener('pointerdown', (e) => {
     if (isUi(e)) return;
     e.preventDefault();
@@ -2105,6 +2331,7 @@
   hiEl.textContent = 'HI ' + pad(hi);
   window.addEventListener('resize', resize);
   initBoard();
+  initAuth();
   requestAnimationFrame(frame);
 })();
 </script>

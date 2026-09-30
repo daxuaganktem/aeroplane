@@ -68,3 +68,27 @@ The publishable key is meant to be public. The policies above allow reading and 
 - The board keeps the best 1,000 scores, and run tokens are deleted after a day.
 
 **Limits:** this stops scripted spam and instant fake scores. Someone willing to wait out a real run's length can still post a score they didn't earn, and bots that genuinely play are not detected. For those, see replay verification and Turnstile in the project notes.
+
+## Player accounts (optional sign-in)
+
+On the GitHub Pages build, a **SIGN IN** button in the top-left corner lets players sign in with Google. Their achievements, stats, best score, unlocked planes, plane and livery choice, and today's challenge progress are saved to their account. These follow them to any device, merging with what's already on that device:
+- counters keep the higher value
+- achievements keep the earliest date earned
+- today's challenges keep the furthest progress
+
+Guests can still play and use the board without signing in. The claude.ai version never shows the button.
+
+### Setting it up
+
+1. **Run the SQL.** In Supabase → **SQL Editor**, run [`supabase/secure-scores.sql`](supabase/secure-scores.sql) again (it now links scores to accounts), then [`supabase/accounts.sql`](supabase/accounts.sql).
+2. **Set where sign-in returns.** In Supabase → **Authentication → URL Configuration**:
+   - set **Site URL** to `https://daxuaganktem.github.io/aeroplane/`
+   - add that same address under **Redirect URLs**
+3. **Create a Google OAuth client.** In [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services**:
+   - configure the **OAuth consent screen**: choose External, then add the app name and your email
+   - under **Credentials**, choose **Create credentials → OAuth client ID → Web application**
+   - under **Authorized redirect URIs**, add `https://nsymcgtlbelmtshkbsok.supabase.co/auth/v1/callback`
+   - copy the **Client ID** and **Client secret**
+4. **Turn on Google in Supabase.** Go to **Authentication → Sign In / Providers → Google**, enable it, paste the Client ID and secret, and save.
+
+To also offer GitHub sign-in, create an OAuth app under GitHub **Settings → Developer settings → OAuth Apps** with the same callback URL. Enable **GitHub** in Supabase, then add `{ id: 'github', label: 'CONTINUE WITH GITHUB' }` to `AUTH_PROVIDERS` in `src/game.html`.
