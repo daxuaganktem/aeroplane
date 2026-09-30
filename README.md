@@ -8,7 +8,7 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops, water tanks, billboards, lobbies and blinking aviation beacons. Windows catch a sweeping glint by day and flicker on and off at night.
 - Ten kinds of oncoming traffic join as your score climbs, each faster or more aggressive: biplanes and blimps (0), light planes (100), helicopters (200), vintage propliners (300), WWII fighters (450), regional jets (600), widebody airliners (800), supersonic jets (1000) and fighter jets that chase your altitude (1200). A red chevron on the right edge warns you before fast ones arrive.
 - Day and night swap every 500 points.
-- **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in:
+- **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in. The Twin Towers also appear in every run, reaching the plane at about 1,000 points (set in `GUARANTEED` in `src/game.html`). The landmarks are:
   - Twin Towers
   - a stadium with floodlights and a crowd
   - a TV tower

@@ -485,8 +485,10 @@
   let lastLandmark = '', sinceLandmark = 0;
   const baseTower = (extra) => Object.assign({ dx: 0, w: 40, shape: 'block', extra: 'none', shade: randi(0, 2), o: 1,
     seed: randi(1, 1e9), style: 0, awning: pick(AWNINGS), beacon: true }, extra);
-  function makeLandmark(x, diff) {
-    const lm = pick(Object.keys(LANDMARKS).filter((k) => k !== lastLandmark));
+  // Landmarks that always turn up in a run, timed to reach the player at this score.
+  const GUARANTEED = [{ lm: 'twin', at: 1000 }];
+  function makeLandmark(x, diff, forced) {
+    const lm = forced || pick(Object.keys(LANDMARKS).filter((k) => k !== lastLandmark));
     lastLandmark = lm;
     let hf, towers;
     switch (lm) {
@@ -504,7 +506,7 @@
     }
     lastHf = hf;
     const last = towers[towers.length - 1];
-    return { x, hf, towers, width: last.dx + last.w, lm };
+    return { x, hf, towers, width: last.dx + last.w, lm, guaranteed: !!forced };
   }
   function landmarkRects(tw, x, y0) {
     const w = tw.w, cx = x + w / 2, hB = groundY - y0;
@@ -1727,7 +1729,7 @@
   const stats = loadJSON('skyline-glide-stats', { runs: 0, total: 0, nightfalls: 0, sunrises: 0, landmarks: {}, types: {}, dailyDone: 0, dailySweeps: 0, got: {} });
   const saveStats = () => { store.set('skyline-glide-stats', JSON.stringify(stats)); queueSync(); };
   let run = null, progTimer = 0; // this flight's counters
-  const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false });
+  const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false, forced: {} });
   const count = (o) => Object.keys(o).length;
 
   // test(best) gets the best score so far, this run included
@@ -2307,7 +2309,12 @@
     spawnCursor -= speed * dt;
     // Towers are generated well past the right edge so oncoming traffic always knows what it will cross.
     while (spawnCursor < W + 800) {
-      const c = sinceLandmark >= 4 && Math.random() < 0.2 ? makeLandmark(spawnCursor, diff) : makeCluster(spawnCursor, diff);
+      // scores accrue at 0.055 per unit of distance, so this is the score when the cluster reaches the plane
+      const arrives = score + (spawnCursor - px) * 0.055;
+      const due = run && GUARANTEED.find((g) => !run.forced[g.lm] && arrives >= g.at);
+      if (due) run.forced[due.lm] = true;
+      const c = due ? makeLandmark(spawnCursor, diff, due.lm)
+        : sinceLandmark >= 4 && Math.random() < 0.2 ? makeLandmark(spawnCursor, diff) : makeCluster(spawnCursor, diff);
       sinceLandmark = c.lm ? 0 : sinceLandmark + 1;
       clusters.push(c);
       spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1);
