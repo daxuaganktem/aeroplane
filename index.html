@@ -1091,6 +1091,23 @@
     boardNote.textContent = Board.note;
   }
 
+  // Supabase calls. Scores go through start_run / submit_score, which check each run on the server
+  // (see supabase/secure-scores.sql); the key travels only in the apikey header.
+  async function rpc(name, body) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    if (!res.ok) {
+      let reason = '';
+      try { reason = (await res.json()).message || ''; } catch (e) { /* no body */ }
+      throw { code: 'remote', reason };
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+  let currentRun = null, lastRun = null; // promises of this run's server token
   async function remoteFetch() {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=200`, {
@@ -1163,12 +1180,10 @@
       if (Board.mode === 'db') {
         await Board.db.doc('scores/' + Board.myId).set({ name, score: value, at: Date.now(), plane: choice.plane.id, color: choice.color.id });
       } else if (Board.mode === 'remote') {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
-          method: 'POST',
-          headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({ name, score: value }),
-        });
-        if (!res.ok) throw { code: 'remote' };
+        const runId = lastRun ? await lastRun : null;
+        if (!runId) throw { code: 'remote', reason: 'no_run' };
+        await rpc('submit_score', { p_run: runId, p_name: name, p_score: value });
+        lastRun = null; // tokens are single use
         remoteFetch();
       } else {
         // A renamed pilot keeps one row under the new name.
@@ -1187,6 +1202,15 @@
         entry.hidden = true;
       } else if (e && e.code === 'quota_exceeded') {
         Board.note = 'The board is full, so this score was not saved.';
+      } else if (e && e.reason === 'rate_limited') {
+        Board.note = 'Too many scores from your connection just now. Wait a minute, then press Save.';
+        entry.hidden = false; nameIn.value = name; $('entryLabel').textContent = 'SAVE YOUR SCORE';
+      } else if (e && ['implausible', 'bad_run', 'run_expired'].includes(e.reason)) {
+        Board.note = "This score couldn't be verified by the server, so it wasn't saved.";
+        pendingScore = 0;
+      } else if (e && e.reason === 'no_run') {
+        Board.note = "The global board couldn't be reached when this run started, so it can't be saved.";
+        pendingScore = 0;
       } else {
         Board.note = 'Could not save your score. Check your connection and try again.';
       }
@@ -1302,7 +1326,12 @@
     if (fuel <= 0) { fuel = 0; fuelOut = true; }
     sfx.flap();
   }
-  function launch() { viewIdx = PLANES.indexOf(choice.plane); audio(); reset(); start(); flap(); }
+  function launch() {
+    viewIdx = PLANES.indexOf(choice.plane);
+    // ask the server for this run's token; the score can only be saved against it
+    currentRun = Board.mode === 'remote' ? rpc('start_run').catch(() => null) : null;
+    audio(); reset(); start(); flap();
+  }
   function press() {
     if (state === 'ready' || (state === 'over' && overT >= 0.5)) return launch();
     if (state === 'playing') flap();
@@ -1335,6 +1364,7 @@
   homeBtn.addEventListener('click', showHome);
   function crash() {
     state = 'over'; overT = 0;
+    lastRun = currentRun; currentRun = null;
     sfx.crash();
     for (let i = 0; i < 12; i++) {
       const a = rand(0, TAU), v = rand(15, 60);

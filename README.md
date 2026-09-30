@@ -37,8 +37,26 @@ The board shows the all-time top 10 pilots, one row per pilot (their best run). 
    grant select, insert on public.scores to anon;
    ```
 
+   Then run [`supabase/secure-scores.sql`](supabase/secure-scores.sql) the same way. It closes direct writes to the table so scores can only arrive through checked server functions (details below).
+
 3. In **Project Settings → API Keys**, copy the Project URL and the publishable key (`sb_publishable_…`, or the legacy `anon` key) into `SUPABASE_URL` and `SUPABASE_ANON_KEY` near the top of the script in `src/game.html`, then run `./build.sh`. The key is sent only in the `apikey` header.
 
 This repo is already connected to its own Supabase project, so the GitHub Pages build uses the global board.
 
 The publishable key is meant to be public. The policies above allow reading and adding scores but not editing or deleting them. Scores are submitted by the browser, so a determined player could post a fake one. That's fine for a casual game, but it isn't cheat-proof.
+
+### Anti-cheat and spam protection
+
+`supabase/secure-scores.sql` moves score saving behind two database functions:
+
+- **`start_run()`**: the game calls it when a run begins and gets a single-use token. The server records the start time and the caller's IP.
+- **`submit_score(run, name, score)`**: rejects the score if any of these apply:
+  - the token is unknown, already used, or older than 2 hours
+  - the score is faster than the game allows: top speed caps scoring at about 21 points a second, so the server checks it against the real time since `start_run`
+  - the name is empty after clean-up
+
+**Rate limits and cleanup:**
+- Each IP address can start 20 runs and submit 5 scores per minute.
+- The board keeps the best 1,000 scores, and run tokens are deleted after a day.
+
+**Limits:** this stops scripted spam and instant fake scores. Someone willing to wait out a real run's length can still post a score they didn't earn, and bots that genuinely play are not detected. For those, see replay verification and Turnstile in the project notes.
