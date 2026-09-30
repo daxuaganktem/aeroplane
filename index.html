@@ -829,9 +829,10 @@
     ctx.save();
     ctx.globalAlpha = 0.55;
     ctx.fillStyle = P.mid;
-    ctx.beginPath(); ctx.ellipse(x, y, 1.1, Math.abs(Math.sin(t * speed)) * r + 0.6, 0, 0, TAU); ctx.fill();
+    const hub = Math.min(1.1, Math.max(0.35, r * 0.13));
+    ctx.beginPath(); ctx.ellipse(x, y, hub, Math.abs(Math.sin(t * speed)) * r + 0.6, 0, 0, TAU); ctx.fill();
     ctx.restore();
-    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill();
+    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, hub, 0, TAU); ctx.fill();
   }
 
   // ---------- aircraft catalogue ----------
@@ -859,35 +860,6 @@
       top: 22, bottom: 12,
       hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
             [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [1, 11.2], [12, 11.2], [12, 6], [21, 5.5]] },
-    turboprop: { sc: 1,
-      fin: P2('M-14 -4.5 L-20 -16 L-24 -16 L-24 -4.5 Z'), finEdge: P2('M-24 -16 L-22.4 -16 L-22.3 -4.5 L-24 -4.5 Z'),
-      tailplane: P2('M-18 -16.2 L-28 -17.8 L-28.5 -15.4 L-19.5 -14.4 Z'),
-      under: P2('M-5.5 3.4 L5.5 3.4 L5 6.2 L-5 6.2 Z'),
-      body: P2('M-25 -4.5 L14 -4.5 C21 -4.5 25.5 -1.5 26 1 C25.5 3.5 21 4.5 14 4.5 L-12 4.5 C-17 4.5 -21 2 -25.5 -1 Z'),
-      shadeY: 1.4, bellyY: 3.1,
-      windows: [{ x0: -15, x1: 11.5, step: 3.4, y: -2.6, w: 1.7, h: 1.9 }],
-      doors: [[-19.2, -3.4, 2.4, 4.8], [14.2, -3.4, 2.4, 4.8]],
-      cockpit: P2('M18 -3.5 L22 -2.5 L23.7 -0.6 L18.5 -0.8 Z'),
-      highWing: P2('M-9 -6.9 L10 -6.9 L10 -4.5 L-9 -4.5 Z'),
-      nacelles: [[1, -9.2, 12.5, 5]], props: [[14.8, -6.7, 8.5]],
-      gear: [[0, 6], [2.5, 6], [19.5, 4.5]],
-      top: 18, bottom: 7,
-      hit: [[26, 1], [20, -4.5], [15, -4.5], [15, -15], [14, -15], [1, -9.2], [-9, -6.9], [-14, -4.5], [-20, -16],
-            [-28, -17.8], [-28.5, -15.4], [-25, -4.5], [-25.5, -1], [-12, 4.5], [-5.5, 6.2], [5.5, 6.2], [20, 4.5]] },
-    bizjet: { sc: 1,
-      fin: P2('M-11.5 -3.8 L-17 -14 L-21 -14 L-21 -3.5 Z'), finEdge: P2('M-21 -14 L-19.5 -14 L-19.4 -3.6 L-21 -3.5 Z'),
-      tailplane: P2('M-15.5 -14.2 L-25 -16 L-25.5 -13.5 L-17 -12.6 Z'),
-      body: P2('M-22 -3.5 L12 -4 C18 -4 22 -1.5 22.5 1 C22 3 18 4 12 4 L-10 4 C-15 4 -19 1.5 -22.5 -0.5 Z'),
-      shadeY: 1.2, bellyY: 2.7,
-      ovals: { x0: -4, x1: 10, step: 3.4, y: -1.6 },
-      doors: [[12.4, -3.3, 2.2, 4.3]],
-      cockpit: P2('M15.5 -3.3 L19 -2.5 L20.6 -0.8 L16 -1 Z'),
-      wing: P2('M3 2 L-6 8 L-9.6 8 L-5 2 Z'), wingTop: P2('M3 2 L-5.5 7.3 L-7.8 7.3 L-2.8 2 Z'),
-      rearEngines: [[-15, -8, 10, 3.9]],
-      gear: [[-2.5, 4], [16, 4]],
-      top: 16.5, bottom: 8.5,
-      hit: [[22.5, 1], [16, -3.8], [-5, -4], [-5, -8], [-15, -8], [-17, -14], [-25, -16], [-25.5, -13.5], [-21, -3.5],
-            [-22.5, -0.5], [-10, 4], [-9.6, 8], [-6, 8], [3, 4]] },
     jumbo: { sc: 0.85,
       farWing: P2('M-1 -5.5 L-8 -9.6 L-4 -9.9 L6 -5.5 Z'),
       fin: P2('M-19 -5.5 C-23 -6.5 -25.5 -11 -27.5 -20.5 L-32.3 -20.8 L-31.8 -5.5 Z'),
@@ -915,33 +887,6 @@
       top: 13.5, bottom: 8,
       hit: [[25, 0.5], [12, -3.5], [7, -6.5], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
             [-18, 7], [-13, 7], [4, 3]] },
-    cessna: { sc: 1.1,
-      fin: P2('M-10 -3 L-14.5 -11 L-17.5 -11 L-17 -3 Z'), finEdge: P2('M-17.5 -11 L-16.3 -11 L-15.8 -3 L-17 -3 Z'),
-      body: P2('M-17 -3 L2 -4.5 L9 -4.5 C13 -4.5 15 -2.5 15.5 0 C15 2.5 13 3.5 9 3.5 L-6 3.5 C-11 3.5 -14 1.5 -17.5 -1 Z'),
-      shadeY: 1, bellyY: 2.4,
-      glass: [P2('M1.5 -3.9 L8.4 -3.9 L10.6 -0.9 L1.5 -0.9 Z')],
-      tailplane: P2('M-12 -1 L-19.5 -3 L-19.8 -1 L-14 0.8 Z'),
-      highWing: P2('M-3.5 -6.4 L9 -6.4 L9 -4.5 L-3.5 -4.5 Z'),
-      struts: [[5, -4.6, 1.5, 2.5]],
-      spinner: P2('M15 -1.6 L17.6 0 L15 1.6 Z'), noseProp: [16.4, 0, 6.5],
-      gear: [[-2, 3.4], [11, 3.4]],
-      top: 11, bottom: 6.5,
-      hit: [[16.5, -6.5], [9, -6.4], [-3.5, -6.4], [-10, -3], [-14.5, -11], [-17.5, -11], [-19.8, -2.8], [-17.5, -1],
-            [-14, 0.8], [-6, 3.5], [9, 3.5], [16.5, 6.5]] },
-    biplane: { sc: 1.05,
-      fin: P2('M-12 -2.5 Q-16 -10 -19.5 -10 L-20 -1 Z'), finEdge: P2('M-19.5 -10 L-18.4 -9.9 L-18.8 -1.2 L-20 -1 Z'),
-      body: P2('M-20 -1.8 L7 -4.2 Q12 -4.2 13 -1.5 L13 2.2 Q12 4.2 7 4.2 L-20 1 Z'),
-      shadeY: 1.2, bellyY: 3,
-      cockpit: P2('M-5.6 -3.9 Q-3.3 -7.2 -1 -4.2 Z'),
-      tailplane: P2('M-15 -0.5 L-22.5 -2 L-22.5 1 Z'),
-      wing: P2('M-5 2.6 L10 2.6 L10 4.8 L-5 4.8 Z'), wingFill: 'liv',
-      cowl: P2('M12.4 -3.6 L15 -3.6 L15 3.6 L12.4 3.6 Z'), noseProp: [16, 0, 9],
-      upperWing: P2('M-6 -12 L12 -12 L12 -9.6 L-6 -9.6 Z'),
-      struts: [[-3, -9.6, -3, 2.6], [9, -9.6, 9, 2.6], [3, -9.6, 5, -4]],
-      fixedGear: [[4.5, 4.2, 6]],
-      top: 12, bottom: 13,
-      hit: [[16.5, -9], [16.5, 9], [9, 5], [6.5, 12.7], [2.5, 12.7], [-5, 4.8], [-20, 1], [-22.5, 1], [-22.5, -2],
-            [-19.5, -10], [-16, -10], [-12, -3], [-6, -12], [12, -12], [15, -3.6]] },
     regional: { sc: 0.95,
       fin: P2('M-14 -4 L-19 -15 L-23 -15 L-23 -4 Z'), finEdge: P2('M-23 -15 L-21.5 -15 L-21.4 -4 L-23 -4 Z'),
       tailplane: P2('M-17.5 -15.2 L-27 -17 L-27.5 -14.5 L-19 -13.6 Z'),
@@ -1018,16 +963,120 @@
             [-3, -3.6], [1, -6.4], [5, -3.8], [13, -3.2]] },
   };
   // Seaplane: the light plane on floats. Widebody: the airliner with a much bigger engine.
-  CRAFT.seaplane = Object.assign({}, CRAFT.cessna, {
-    gear: null, floats: P2('M-7 7.2 L12 7.2 Q15.2 7.2 16.4 8.8 L14.4 10.2 L-7 10.2 Z'),
-    floatStruts: [[-1, 3.4, -1, 7.2], [9, 3.4, 9, 7.2]],
-    bottom: 10.5,
-    hit: [[16.5, -6.5], [9, -6.4], [-3.5, -6.4], [-10, -3], [-14.5, -11], [-17.5, -11], [-19.8, -2.8], [-17.5, -1],
-          [-14, 0.8], [-7, 3.5], [-7, 10.2], [14.4, 10.2], [16.5, 6.5]] });
   CRAFT.widebody = Object.assign({}, CRAFT.airliner, {
     engines: [[-1.5, 6.4, 14, 6]], bottom: 13,
     hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
           [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [-1.5, 12.4], [12.5, 12.4], [12.5, 6], [21, 5.5]] });
+
+  // Redrawn from the art references in docs/player-plane-image-prompt.md: slim white bodies with a thin
+  // livery cheatline over a grey belly, rounded windows, outlined doors and livery details.
+  // extras: extra shapes { p: path, f: fill, s: outline (true = soft grey), w: line width, layer: back | mid | front }.
+  // Fills name palette entries (liv, dark, white, shade, wing, wingShade, win, winGray, cockpit, steel, gray, char, glass, tyre).
+  CRAFT.cessna = { sc: 1.45,
+    fin: P2('M-15.6 -6 L-11.9 -2.3 C-11 -1.4 -10.4 -1.1 -9.8 -1 L-16.3 -0.6 L-17.6 -6 Z'),
+    finEdge: P2('M-17.6 -6 L-16.4 -6 L-15.2 -0.6 L-16.3 -0.6 Z'),
+    body: P2('M-16.3 -0.6 L-9.8 -1 C-6 -1.2 -3 -1.8 -1.5 -2.2 L8.3 -2.6 C10 -2.4 11 -1.4 11.8 -0.8 C13.5 -0.6 15 -0.4 15.6 0.6 C15.8 1.6 15 2.2 14.6 2.4 C13 3.2 11.5 3.4 9 3.5 L2 3.5 C-4 3.3 -9 2.4 -12.5 1.3 C-14.5 0.8 -15.8 0.2 -16.6 -0.2 Z'),
+    shadePath: P2('M-18 1 L16.5 1.8 L16.5 6 L-18 6 Z'), cheatPath: P2('M-18 0.55 L16.5 1.35 L16.5 1.8 L-18 1 Z'),
+    glass: [P2('M-0.2 -1.6 C0.3 -1.9 1 -2 3 -2 L3.1 -0.1 L0.3 -0.1 C-0.4 -0.1 -0.6 -0.9 -0.2 -1.6 Z'),
+            P2('M3.8 -2 L7.5 -2 C8.3 -2 8.6 -1.3 8.6 -0.1 L3.8 -0.1 Z'),
+            P2('M9.2 -2.2 C10.1 -2.3 10.7 -1.9 11.8 -0.3 L9.3 -0.3 Z')],
+    doors: [[3.5, -0.1, 4.2, 3.35]], doorHandles: true, doorWidth: 0.22,
+    tailplane: P2('M-18.2 -0.3 Q-15 -0.9 -11.7 -0.4 Q-11.5 0.4 -12.5 0.5 L-17 0.3 Z'),
+    highWing: P2('M-1.6 -2.5 C1 -3.1 4.5 -3.7 7.2 -3.8 C8.3 -3.8 8.9 -3.4 8.8 -2.9 L8.5 -2.5 Z'),
+    wingAccent: P2('M1.2 -3 C3.4 -3.5 5.5 -3.8 7.2 -3.8 C8 -3.8 8.5 -3.6 8.7 -3.3 C6.4 -3.4 3.8 -3.2 1.2 -3 Z'),
+    extras: [{ p: P2('M5 -2.5 L5.9 -2.5 L8.6 3.3 L7.7 3.3 Z'), f: 'wing', s: true, layer: 'front' },
+             { p: P2('M15.6 -0.5 L15.6 1.9'), s: 'wingShade', w: 0.12, layer: 'mid' }],
+    spinner: P2('M15.6 -0.5 L17.8 0.7 L15.6 1.9 Z'), noseProp: [16.6, 0.7, 3.6],
+    gear: [[6.5, 3.4], [14, 2.6]], gearScale: 0.5,
+    top: 6.2, bottom: 4.4,
+    hit: [[17.8, 0.7], [16.6, -3], [15.4, -0.4], [11.8, -0.8], [8.8, -3.3], [7.2, -3.8], [1.2, -3.1], [-1.6, -2.6],
+          [-9.8, -1], [-11.9, -2.3], [-15.6, -6], [-17.6, -6], [-16.3, -0.6], [-18.2, -0.3], [-17, 0.4], [-12.5, 1.3],
+          [2, 3.5], [8.6, 3.3], [14.6, 2.4], [16.6, 4.3]] };
+
+  CRAFT.seaplane = Object.assign({}, CRAFT.cessna, {
+    gear: null,
+    extras: CRAFT.cessna.extras.concat([
+      // far float, struts, then the near float
+      { p: P2('M-7.2 5.4 C-7 5 14.5 5 15.8 5.6 C15.4 6.1 14 6.4 13 6.4 L-6.8 6.4 C-7.3 6.2 -7.4 5.7 -7.2 5.4 Z'), f: 'white', s: true, layer: 'back' },
+      { p: P2('M-6.9 5.55 L15.3 5.6 L15 5.85 L-6.9 5.85 Z'), f: 'liv', layer: 'back' },
+      { p: P2('M1 3.4 L-1 6.4 M3.2 3.5 L4.6 6.4 M10.2 3.3 L11.6 6.3 M12.9 3 L11.8 6.3'), s: 'wing', w: 0.55, layer: 'front' },
+      { p: P2('M-8.8 6.4 C-8.8 5.9 14 5.9 15.6 6.3 C16.4 6.7 16 8 14.5 8.6 C12 9.2 -3 9.3 -7.8 8.6 C-8.8 8.3 -9 7 -8.8 6.4 Z'), f: 'white', s: true, layer: 'front' },
+      { p: P2('M-8.6 6.9 L15.5 6.85 L15.3 7.25 L-8.6 7.3 Z'), f: 'liv', layer: 'front' },
+      { p: P2('M-8.4 8.05 L14.6 8 L14.2 8.3 L-8.2 8.35 Z'), f: 'shade', layer: 'front' },
+    ]),
+    bottom: 9.4,
+    hit: [[17.8, 0.7], [16.6, -3], [15.4, -0.4], [11.8, -0.8], [8.8, -3.3], [7.2, -3.8], [1.2, -3.1], [-1.6, -2.6],
+          [-9.8, -1], [-11.9, -2.3], [-15.6, -6], [-17.6, -6], [-16.3, -0.6], [-18.2, -0.3], [-17, 0.4], [-12.5, 1.3],
+          [-8.8, 6.4], [-7.8, 8.7], [14.5, 8.7], [16.2, 7.2], [16.6, 4.3]] });
+
+  CRAFT.turboprop = { sc: 0.92,
+    fin: P2('M-28.4 -12.3 L-23.2 -12.3 C-22 -9 -20.5 -6.5 -18 -4.6 C-16.5 -3.6 -15 -3.4 -13 -3.3 L-26.1 -3.2 Z'),
+    finEdge: P2('M-28.4 -12.3 L-26.9 -12.3 L-24.6 -3.2 L-26.1 -3.2 Z'),
+    tailplane: P2('M-30.9 -11.6 C-29 -12.2 -24 -12.3 -22.6 -11.9 C-22.3 -11.2 -23 -10.9 -24 -10.9 L-29 -11.1 Z'),
+    body: P2('M-28.2 -2.7 L-12 -3.3 L22 -3.2 C26.5 -3.1 29.5 -1.8 31.1 0.6 C31.4 1.8 30.6 2.8 28.8 3.2 L24 3.4 L-10 3.4 C-17 3.2 -23 1.8 -27.2 0.2 C-28.4 -0.3 -28.7 -1.7 -28.2 -2.7 Z'),
+    shadePath: P2('M-30 0.3 L32 1.7 L32 6 L-30 6 Z'), cheatPath: P2('M-30 -0.2 L32 1.2 L32 1.7 L-30 0.3 Z'),
+    windows: [{ x0: -7.9, x1: 21.2, step: 1.62, y: -1.15, w: 0.8, h: 0.85, r: 0.22, f: 'winGray' }],
+    doors: [[-11, -2.2, 1.5, 2.8], [22.6, -2.2, 1.6, 2.9]], doorHandles: true, doorWidth: 0.32,
+    cockpit: P2('M24.2 -1.6 C25.2 -1.95 27.4 -1.95 28.9 -0.85 L24.4 -0.8 Z'),
+    extras: [{ p: P2('M-28.4 -2.4 C-24 -2.6 -22.8 -1.8 -22.6 -0.9 C-23.5 -0.2 -26 0 -27.6 -0.3 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M26.4 -1.9 L26.1 -0.8'), s: 'white', w: 0.25, layer: 'mid' },
+             { p: P2('M0 3 C1 2.6 4 2.5 4.8 3 C5 3.6 4 3.9 2.3 3.9 C1 3.9 0 3.6 0 3 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M-5.3 -6 L4 -6.1 C5.2 -6 5.8 -5.3 5.4 -4.7 L3.5 -3.3 L-2.2 -3.3 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M-0.7 -3 L1.4 -3.7 L1.4 -1.8 Z'), f: 'char', layer: 'front' },
+             { p: P2('M1.2 -3.2 C2.5 -4.8 7 -5.1 9.6 -4.2 L10.3 -3.2 C10.2 -2 9 -1.5 7 -1.4 L2.5 -1.6 C1.6 -1.8 1.1 -2.4 1.2 -3.2 Z'), f: 'liv', s: true, layer: 'front' },
+             { p: P2('M9.9 -4 L11.5 -3.2 L9.9 -2.3 Z'), f: 'char', layer: 'front' }],
+    props: [[10.9, -3.2, 4.1]],
+    gear: [[2.4, 3.9], [25, 3.3]], gearScale: 0.7,
+    top: 12.4, bottom: 4.2,
+    hit: [[31.1, 0.6], [28, -2.2], [22, -3.2], [11.5, -3.2], [10.9, -7.3], [9.6, -4.6], [5.4, -4.7], [4, -6.1], [-5.3, -6],
+          [-12, -3.3], [-18, -4.6], [-22.4, -11.2], [-22.6, -11.9], [-30.9, -11.6], [-29, -11.1], [-28.4, -3], [-28.6, -1.5],
+          [-27.2, 0.2], [-10, 3.4], [0, 3.4], [0.5, 3.9], [4.6, 3.9], [5, 3.4], [24, 3.4], [28.8, 3.2]] };
+
+  CRAFT.biplane = { sc: 0.95,
+    fin: P2('M-28.6 -1.4 C-29 -4 -28.5 -7 -26.5 -7.2 C-23.5 -7.2 -21.5 -4.5 -20 -2.2 L-19 -1.3 Z'),
+    finEdge: P2('M-28.6 -1.4 C-29 -4 -28.5 -7 -26.5 -7.2 C-27.5 -6 -27.8 -4 -27.4 -1.4 Z'),
+    body: P2('M-27.2 -0.6 L-10 -2.5 L7 -3.4 L21 -3.4 L21 3.6 L6 3.7 C-6 3.4 -16 2.8 -22 2 C-25 1.4 -27 0.8 -27.6 0.2 Z'),
+    shadePath: P2('M-29 0.5 L22 2.1 L22 6 L-29 6 Z'), cheatPath: P2('M-29 -0.2 L22 1.4 L22 2.1 L-29 0.5 Z'),
+    cockpit: P2('M0.8 -3.3 C1.5 -2.1 2.8 -1.9 3.7 -2.6 L3.9 -3.5 Z'),
+    tailplane: P2('M-30.2 0.3 C-28 -0.4 -21 -0.4 -18.9 0.3 C-21 1.1 -28 1.1 -30.2 0.3 Z'), tailplaneFill: 'liv',
+    wing: P2('M3.2 4.3 C5 3 19 3 20.7 4 C19.5 5.5 5 5.6 3.2 4.3 Z'), wingFill: 'liv',
+    upperWing: P2('M2.3 -9.2 C4 -10.4 23 -10.6 25.5 -9.4 C24 -8 4.5 -8 2.3 -9.2 Z'),
+    struts: [[8.2, -8.9, 8.2, 3.3], [20.4, -8.9, 20.4, 3.3], [8.5, -8.8, 13.8, 3.2], [13.8, -8.8, 8.6, 3.2], [20.2, -8.8, 16.6, -3.4]],
+    strutColor: 'steel', strutWidth: 0.55,
+    cowl: P2('M21 -3.6 L25.2 -3.6 C26.4 -3.6 26.8 -2.2 26.8 0 C26.8 2.4 26.4 3.8 25.2 3.8 L21 3.8 Z'),
+    extras: [{ p: P2('M5 -3.4 L5.9 -5.1 L6.9 -3.4 Z'), f: 'glass', s: true, layer: 'mid' },
+             { p: P2('M-24.4 2.3 L-25 3.6'), s: 'char', w: 0.5, layer: 'back' },
+             { p: P2('M14 4.6 L17.8 8.4 M18.6 4.3 L18.2 8.4'), s: 'steel', w: 0.55, layer: 'front' },
+             { p: P2('M20.7 8.75 A2.5 2.5 0 1 1 15.7 8.75 A2.5 2.5 0 1 1 20.7 8.75 Z'), f: 'tyre', layer: 'front' },
+             { p: P2('M19.6 8.75 A1.4 1.4 0 1 1 16.8 8.75 A1.4 1.4 0 1 1 19.6 8.75 Z'), f: 'liv', layer: 'front' },
+             { p: P2('M22.2 -2.9 h1.6 v0.8 h-1.6 Z M22.2 -1.2 h1.6 v0.8 h-1.6 Z M22.2 0.5 h1.6 v0.8 h-1.6 Z M22.2 2.2 h1.6 v0.8 h-1.6 Z'), f: 'char', layer: 'front' },
+             { p: P2('M26.8 -1.4 L29.3 0.2 L26.8 1.7 Z'), f: 'liv', s: true, layer: 'front' }],
+    noseProp: [28.2, 0.2, 7.9],
+    top: 10.6, bottom: 11.3,
+    hit: [[29.3, 0.2], [28.2, -7.9], [26.8, -3.6], [25.5, -9.4], [23, -10.5], [2.3, -9.2], [2.2, -8.2], [6.9, -3.5], [-10, -2.5],
+          [-20, -2.2], [-26.5, -7.2], [-29, -4], [-28.6, -1.4], [-30.2, 0.3], [-27.6, 0.4], [-22, 2], [3.2, 4.3], [3.2, 5.4],
+          [15.7, 8.7], [18.2, 11.25], [20.7, 8.7], [20.7, 4], [26.8, 3.8], [28.2, 7.9]] };
+
+  CRAFT.bizjet = { sc: 0.9,
+    fin: P2('M-27.2 -10.6 L-19 -10.6 L-14.3 -3.9 C-13.5 -3.5 -12.8 -3.4 -12 -3.3 L-22.5 -2.4 Z'),
+    finEdge: P2('M-27.2 -10.6 L-25.3 -10.6 L-20.8 -2.5 L-22.5 -2.4 Z'),
+    tailplane: P2('M-31.2 -10.4 C-29 -11 -21 -11.2 -19.4 -10.6 C-19.3 -9.9 -20 -9.7 -21 -9.7 L-29.5 -10.1 Z'),
+    body: P2('M-23.8 -1.9 L-12 -3.4 L20 -3.1 C25 -2.8 28.5 -0.8 30.3 1.8 C30.3 2.6 29.6 3.1 28 3.4 C24 4.2 16 4.6 4 4.6 C-4 4.6 -9 4.2 -12 3.4 C-17 2 -21.5 0.2 -24.2 -1.2 Z'),
+    shadePath: P2('M-25 0.9 L31 3.4 L31 7 L-25 7 Z'), cheatPath: P2('M-25 0.4 L31 2.9 L31 3.4 L-25 0.9 Z'),
+    windows: [{ x0: 3.4, x1: 14.4, step: 2.75, y: -0.7, w: 1.1, h: 1.35, r: 0.45, f: 'winGray' }],
+    doors: [[15.5, -1.6, 2, 3.9]], doorHandles: true, doorWidth: 0.35,
+    cockpit: P2('M20.7 -1.1 C21.5 -1.35 24 -1.35 26.5 0.3 L20.7 0.3 Z'),
+    antenna: [1, -3.2, 1.9, -4.2],
+    extras: [{ p: P2('M22.9 -1.3 L23.5 0.3'), s: 'white', w: 0.3, layer: 'mid' },
+             { p: P2('M6.3 2.8 L-6 3.6 L-8.2 4.3 L-6.5 4.7 L5.5 3.5 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M-9.3 0.9 L-8.1 0.9 L-5.8 4 L-7 4.1 Z'), f: 'liv', layer: 'mid' },
+             { p: P2('M-15 -2.6 L-17.6 -1.8 L-15 -0.8 Z'), f: 'wingShade', s: true, layer: 'front' },
+             { p: P2('M-15 -1.6 C-15 -3.2 -13.5 -3.9 -11 -3.9 L-6.2 -3.9 C-5.6 -3.9 -5.3 -3 -5.3 -1.9 C-5.3 -0.7 -5.6 0 -6.2 0 L-12 0 C-14 0 -15 -0.6 -15 -1.6 Z'), f: 'liv', s: true, layer: 'front' },
+             { p: P2('M-6.3 -3.8 C-5.3 -3.8 -5 -2.8 -5 -1.9 C-5 -1 -5.3 -0.1 -6.3 -0.1 C-5.9 -1 -5.9 -2.9 -6.3 -3.8 Z'), f: 'gray', layer: 'front' }],
+    gear: [[-3.5, 4.4], [-1.5, 4.5], [25, 3.6]], gearScale: 0.7,
+    top: 11.2, bottom: 4.8,
+    hit: [[30.3, 1.8], [25, -2.6], [20, -3.1], [-5.3, -3.4], [-5.5, -3.95], [-14.3, -3.9], [-19, -10.6], [-19.3, -10.9],
+          [-31.2, -10.6], [-29.5, -10], [-22.5, -2.4], [-24.2, -1.2], [-12, 3.4], [-8.2, 4.3], [-6.5, 4.7], [4, 4.6], [28, 3.4]] };
 
   // Player hangar: ten planes that unlock with your best score, in six liveries.
   const PLANES = [
@@ -1078,8 +1127,26 @@
       ctx.strokeStyle = OUT; ctx.lineWidth = lw;
     };
     const wheel = (x, y, r) => { ctx.fillStyle = col(PC.tyre); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
+    const pal = { liv, dark, white: PC.white, shade: PC.shade, wing: PC.wing, wingShade: PC.wingShade, win: PC.win,
+                  winGray: '#6b7078', cockpit: PC.cockpit, steel: PC.steel, steelShade: PC.steelShade, tyre: PC.tyre,
+                  gray: '#9aa3ad', char: '#3b4049', glass: '#c9d6e2' };
+    const paint = (key) => (sil ? SIL : pal[key] || key);
+    const extras = (layer) => {
+      for (const e of sh.extras || []) {
+        if (e.layer !== layer) continue;
+        if (e.f) { ctx.fillStyle = paint(e.f); ctx.fill(e.p); }
+        if (e.s && !sil) {
+          ctx.strokeStyle = e.s === true ? OUT : paint(e.s); ctx.lineWidth = e.w || lw;
+          ctx.stroke(e.p);
+          ctx.strokeStyle = OUT; ctx.lineWidth = lw;
+        }
+      }
+    };
 
-    if (gear && sh.gear) for (const [gx, gy] of sh.gear) { ctx.fillStyle = col(PC.win); ctx.fillRect(gx - 0.45, gy, 0.9, 5.5); wheel(gx, gy + 6.4, 1.9); }
+    if (gear && sh.gear) {
+      const g = sh.gearScale || 1;
+      for (const [gx, gy] of sh.gear) { ctx.fillStyle = col(PC.win); ctx.fillRect(gx - 0.45 * g, gy, 0.9 * g, 5.5 * g); wheel(gx, gy + 6.4 * g, 1.9 * g); }
+    }
     if (sh.fixedGear) for (const [gx, gy, len] of sh.fixedGear) {
       if (len > 2) { lines([[gx - 1.5, gy, gx, gy + len], [gx + 1.5, gy, gx, gy + len]], PC.win, 0.8); wheel(gx, gy + len + 0.5, 2.2); }
       else wheel(gx, gy + len, 1.2);
@@ -1090,6 +1157,7 @@
     if (sh.finEdge && !sil) { ctx.fillStyle = dark; ctx.fill(sh.finEdge); }
     if (sh.lowerFin) part(sh.lowerFin, col(liv));
     if (sh.under) part(sh.under, col(PC.white));
+    extras('back');
     if (sh.floatStruts) lines(sh.floatStruts, PC.win, 0.8);
     if (sh.floats) {
       part(sh.floats, col(PC.white));
@@ -1105,17 +1173,27 @@
     part(sh.body, col(bodyFill));
     if (!sil) {
       ctx.save(); ctx.clip(sh.body);
-      ctx.fillStyle = sh.bodyFill === 'liv' ? PC.wing : sh.military ? PC.steelShade : PC.shade; ctx.fillRect(-40, sh.shadeY, 80, 20);
+      ctx.fillStyle = sh.bodyFill === 'liv' ? PC.wing : sh.military ? PC.steelShade : PC.shade;
+      if (sh.shadePath) ctx.fill(sh.shadePath); else ctx.fillRect(-40, sh.shadeY, 80, 20);
+      if (sh.cheatPath) { ctx.fillStyle = liv; ctx.fill(sh.cheatPath); }
       if (sh.bellyY != null) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.bellyY, 80, 20); }
       if (sh.band) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.band[0], 80, sh.band[1] - sh.band[0]); }
       ctx.restore();
       ctx.stroke(sh.body);
       ctx.fillStyle = PC.win;
-      for (const wr of sh.windows || []) for (let x = wr.x0; x <= wr.x1; x += wr.step) ctx.fillRect(x, wr.y, wr.w, wr.h);
+      for (const wr of sh.windows || []) {
+        ctx.fillStyle = paint(wr.f || 'win');
+        for (let x = wr.x0; x <= wr.x1 + 0.01; x += wr.step) {
+          if (wr.r && ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, wr.y, wr.w, wr.h, wr.r); ctx.fill(); } else ctx.fillRect(x, wr.y, wr.w, wr.h);
+        }
+      }
       if (sh.ovals) for (let x = sh.ovals.x0; x <= sh.ovals.x1; x += sh.ovals.step) { ctx.beginPath(); ctx.ellipse(x, sh.ovals.y, 0.9, 1.15, 0, 0, TAU); ctx.fill(); }
       for (const g of sh.glass || []) { ctx.fillStyle = PC.cockpit; ctx.fill(g); }
-      ctx.strokeStyle = liv; ctx.lineWidth = 0.75;
-      for (const [x, y, w, h] of sh.doors || []) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 0.8); else ctx.rect(x, y, w, h); ctx.stroke(); }
+      ctx.strokeStyle = liv; ctx.lineWidth = sh.doorWidth || 0.75;
+      for (const [x, y, w, h] of sh.doors || []) {
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, Math.min(0.8, w / 3)); else ctx.rect(x, y, w, h); ctx.stroke();
+        if (sh.doorHandles) { ctx.fillStyle = paint('winGray'); ctx.fillRect(x + w * 0.35, y + h * 0.28, Math.max(0.4, w * 0.3), Math.max(0.3, h * 0.09)); }
+      }
       ctx.lineWidth = lw; ctx.strokeStyle = OUT;
       if (sh.cockpit) { ctx.fillStyle = PC.cockpit; ctx.fill(sh.cockpit); }
       if (sh.canopy) { ctx.fillStyle = PC.cockpit; ctx.fill(sh.canopy); }
@@ -1130,8 +1208,10 @@
         ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, TAU); ctx.fill();
       }
     }
-    if (sh.tailplane) part(sh.tailplane, col(PC.wing));
+    extras('mid');
+    if (sh.tailplane) part(sh.tailplane, col(sh.tailplaneFill === 'liv' ? liv : PC.wing));
     if (sh.highWing) part(sh.highWing, col(PC.wing));
+    if (sh.wingAccent) { ctx.fillStyle = col(liv); ctx.fill(sh.wingAccent); }
     if (sh.wing) {
       const wf = sh.wingFill === 'liv' ? liv : sh.military ? PC.steelShade : sh.bodyFill === 'liv' ? dark : PC.wingShade;
       part(sh.wing, col(wf));
@@ -1145,8 +1225,10 @@
     if (sh.cowl) part(sh.cowl, col(PC.steel));
     if (!sil) for (const [x, y, r] of (sh.props || []).concat(sh.noseProp ? [sh.noseProp] : [])) propDisc(x, y, r, 34);
     if (sh.spinner) part(sh.spinner, col(liv));
-    if (sh.upperWing) { if (sh.struts) lines(sh.struts, PC.win, 0.8); part(sh.upperWing, col(liv)); }
-    else if (sh.struts) lines(sh.struts, PC.wingShade, 0.9);
+    extras('front');
+    const strutCol = sh.strutColor ? pal[sh.strutColor] : null;
+    if (sh.upperWing) { if (sh.struts) lines(sh.struts, strutCol || PC.win, sh.strutWidth || 0.8); part(sh.upperWing, col(liv)); }
+    else if (sh.struts) lines(sh.struts, strutCol || PC.wingShade, sh.strutWidth || 0.9);
     if (sh.skids) lines(sh.skids, PC.win, 1);
     if (sh.rotor) {
       const [x, y, span] = sh.rotor;
@@ -1174,9 +1256,9 @@
   // Oncoming traffic: ten types, each unlocking at a score and faster or more aggressive than the last.
   // track: how hard it steers toward your altitude; warn: seconds of edge warning before it appears.
   const TRAFFIC = [
-    { id: 'biplane', unlock: 0, v: [25, 55], sc: [1, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0 },
+    { id: 'biplane', unlock: 0, v: [25, 55], sc: [0.66, 0.74], track: 0, wobble: 6, gap: 1.15, warn: 0 },
     { id: 'blimp', unlock: 0, v: [5, 18], sc: [0.9, 1], track: 0, wobble: 3, gap: 1.4, warn: 0 },
-    { id: 'cessna', unlock: 100, v: [35, 65], sc: [1.05, 1.15], track: 0, wobble: 3, gap: 1.1, warn: 0 },
+    { id: 'cessna', unlock: 100, v: [35, 65], sc: [1.35, 1.5], track: 0, wobble: 3, gap: 1.1, warn: 0 },
     { id: 'helicopter', unlock: 200, v: [20, 45], sc: [1, 1.1], track: 10, wobble: 5, gap: 1.1, warn: 0 },
     { id: 'propliner', unlock: 300, v: [55, 95], sc: [0.9, 1], track: 6, wobble: 2, gap: 1, warn: 0 },
     { id: 'spitfire', unlock: 450, v: [110, 160], sc: [1, 1.1], track: 20, wobble: 1, gap: 0.95, warn: 0.4 },
