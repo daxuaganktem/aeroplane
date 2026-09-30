@@ -58,7 +58,7 @@
     background: transparent; color: var(--ink);
     opacity: 0.7; cursor: pointer;
   }
-  #mute:focus-visible, #panel button:focus-visible, #nameIn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #mute:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   #fuel {
     position: fixed;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
@@ -73,44 +73,89 @@
   #fuel.low #fuelFill { background: var(--warn); }
   #fuel.low #fuelLabel { color: var(--warn); }
   #fuel.empty { animation: blink 0.4s steps(1) infinite; }
-  #msg {
-    position: fixed;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: min(calc(100vw - 32px), 560px);
-    max-height: calc(100dvh - 24px);
-    display: grid; justify-items: center; gap: 14px;
-    text-align: center;
+  /* Menus: stacked in portrait, two columns in landscape; the board list scrolls inside its card. */
+  #overlay {
+    position: fixed; inset: 0;
+    box-sizing: border-box;
+    padding: calc(env(safe-area-inset-top, 0px) + 58px) calc(env(safe-area-inset-right, 0px) + 16px)
+             calc(env(safe-area-inset-bottom, 0px) + 40px) calc(env(safe-area-inset-left, 0px) + 16px);
+    display: grid;
+    grid-template-columns: minmax(0, 400px);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "head" "left" "right";
+    justify-content: center;
+    align-content: start;
+    gap: 12px;
     pointer-events: none;
   }
-  #msgTitle { font: clamp(14px, 4.4vw, 24px)/1.3 var(--pixel); letter-spacing: 0.22em; text-wrap: balance; }
-  #msgSub { font: clamp(8px, 2.3vw, 11px)/1.9 var(--pixel); letter-spacing: 0.12em; opacity: 0.8; animation: pulse 1.2s steps(2) infinite; }
-  #hint { font: clamp(7px, 2vw, 9px)/1.9 var(--pixel); letter-spacing: 0.08em; opacity: 0.55; max-width: 32ch; }
-  @media (orientation: portrait) { #msg { top: 40%; } }
-
-  #panel {
+  @media (orientation: landscape) and (min-width: 600px) {
+    #overlay {
+      grid-template-columns: minmax(0, 340px) minmax(0, 360px);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "head head" "left right";
+      column-gap: 16px;
+    }
+  }
+  #ovHead { grid-area: head; display: grid; justify-items: center; gap: 8px; text-align: center; }
+  #ovTitle { font: clamp(14px, 4.4vw, 24px)/1.3 var(--pixel); letter-spacing: 0.22em; text-wrap: balance; }
+  #ovSub { font: clamp(8px, 2.3vw, 11px)/1.9 var(--pixel); letter-spacing: 0.12em; opacity: 0.8; animation: pulse 1.2s steps(2) infinite; }
+  #hint { font: clamp(7px, 2vw, 9px)/1.9 var(--pixel); letter-spacing: 0.08em; opacity: 0.55; max-width: 34ch; }
+  .card {
     pointer-events: auto;
-    width: min(100%, 360px);
+    touch-action: pan-y;
     box-sizing: border-box;
+    min-width: 0; min-height: 0; max-height: 100%;
+    align-self: start;
+    overflow-y: auto;
     background: var(--sky);
     border: 2px solid var(--ink);
     border-radius: 4px;
     padding: 12px 14px;
-    display: grid; gap: 10px;
+    display: flex; flex-direction: column; gap: 10px;
     font: clamp(8px, 2.2vw, 10px)/1.6 var(--pixel);
     letter-spacing: 0.05em;
     text-align: left;
   }
-  #boardHead { display: flex; justify-content: space-between; gap: 8px; opacity: 0.7; }
+  #left { grid-area: left; }
+  #right { grid-area: right; overflow: hidden; }
+  #hangar, #result { display: flex; flex-direction: column; gap: 10px; }
+  .cardHead { display: flex; justify-content: space-between; gap: 8px; opacity: 0.7; }
+  #preview { width: 100%; height: 64px; display: block; flex: none; }
+  .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  @media (max-width: 330px) { .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .chip {
+    font: clamp(7px, 2vw, 10px)/1.2 var(--pixel); letter-spacing: 0.02em;
+    min-width: 0; min-height: 36px; padding: 6px 2px;
+    border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--sky); color: var(--ink);
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--sky); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .swatch {
+    width: 30px; height: 30px; padding: 0;
+    border: 2px solid var(--ink); border-radius: 50%;
+    background: var(--c);
+    box-shadow: inset 0 0 0 3px var(--sky);
+    cursor: pointer;
+  }
+  .swatch[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .actions { display: flex; gap: 8px; }
+  .actions .px { flex: 1; min-height: 42px; font-size: clamp(9px, 2.4vw, 12px); }
+  .px.ghost { background: var(--sky); color: var(--ink); }
+  .bigScore { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .bigScore strong { font: clamp(16px, 5vw, 24px)/1 var(--pixel); font-weight: normal; font-variant-numeric: tabular-nums; }
   #boardList {
     list-style: none; margin: 0; padding: 0;
-    display: grid; gap: 2px;
-    max-height: max(80px, calc(100dvh - 300px));
+    display: grid; align-content: start; gap: 2px;
+    flex: 1 1 auto; min-height: 64px;
     overflow-y: auto;
+    touch-action: pan-y;
     font-variant-numeric: tabular-nums;
   }
-  #boardList li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 8px; padding: 3px 4px; }
-  #boardList li span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #boardList li { display: grid; grid-template-columns: 2.4em 10px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 3px 4px; }
+  #boardList li .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #boardList li .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, transparent); }
   #boardList li.me { background: var(--ink); color: var(--sky); }
   #boardList li.none { display: block; opacity: 0.6; }
   #entry { display: grid; gap: 8px; }
@@ -127,6 +172,7 @@
   }
   .px {
     font: clamp(8px, 2.2vw, 10px)/1 var(--pixel);
+    letter-spacing: 0.08em;
     padding: 10px 12px;
     border: 2px solid var(--ink); border-radius: 2px;
     background: var(--ink); color: var(--sky);
@@ -135,13 +181,24 @@
   .px:disabled { opacity: 0.5; cursor: default; }
   #saved { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .link { font: inherit; letter-spacing: inherit; background: none; border: 0; padding: 4px 0; color: var(--ink); text-decoration: underline; cursor: pointer; }
-  #boardNote { opacity: 0.7; }
+  #boardNote { opacity: 0.7; flex: none; }
+  .card button:focus-visible, #nameIn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  @media (max-height: 430px) {
+    #overlay { gap: 8px; padding-top: calc(env(safe-area-inset-top, 0px) + 50px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 36px); }
+    #ovHead { gap: 4px; }
+    .card { padding: 8px 10px; gap: 7px; }
+    #hangar, #result { gap: 7px; }
+    #preview { height: 44px; }
+    .chip { min-height: 30px; }
+    .swatch { width: 26px; height: 26px; }
+    .actions .px { min-height: 36px; }
+  }
 
   .blink { animation: blink 0.25s steps(1) 4; }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes pulse { 50% { opacity: 0.35; } }
   @media (prefers-reduced-motion: reduce) {
-    #msgSub, .blink, #fuel.empty { animation: none; }
+    #ovSub, .blink, #fuel.empty { animation: none; }
   }
 </style>
 
@@ -155,23 +212,40 @@
   </svg>
 </button>
 <div id="fuel" hidden><span id="fuelLabel">FUEL</span><div id="fuelBar"><div id="fuelFill"></div></div></div>
-<div id="msg">
-  <div id="msgTitle">SKYLINE GLIDE</div>
-  <div id="panel">
-    <form id="entry" hidden>
-      <label for="nameIn" id="entryLabel">NEW BEST! ENTER YOUR NAME</label>
-      <div class="row">
-        <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" placeholder="ACE">
-        <button class="px" id="saveBtn" type="submit">SAVE</button>
-      </div>
-    </form>
-    <div id="saved" hidden><span id="savedText"></span><button class="link" id="editName" type="button">EDIT NAME</button></div>
-    <div id="boardHead"><span>TOP PILOTS</span><span id="boardScope">THIS DEVICE</span></div>
+<div id="overlay">
+  <div id="ovHead">
+    <div id="ovTitle">SKYLINE GLIDE</div>
+    <div id="ovSub">TAP ANYWHERE TO FLY · HOLD TO CLIMB</div>
+    <div id="hint" hidden>Turn your phone sideways to see further ahead</div>
+  </div>
+  <section id="left" class="card" aria-label="Your plane">
+    <div id="hangar">
+      <div class="cardHead"><span>HANGAR</span><span id="planeName">AIRLINER</span></div>
+      <canvas id="preview" aria-hidden="true"></canvas>
+      <div class="chips" id="planeChips" role="group" aria-label="Plane type"></div>
+      <div class="swatches" id="swatches" role="group" aria-label="Livery colour"></div>
+    </div>
+    <div id="result" hidden>
+      <div class="bigScore"><span>SCORE</span><strong id="finalScore">00000</strong></div>
+      <form id="entry" hidden>
+        <label for="nameIn" id="entryLabel">NEW BEST! ENTER YOUR NAME</label>
+        <div class="row">
+          <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" placeholder="ACE">
+          <button class="px" id="saveBtn" type="submit">SAVE</button>
+        </div>
+      </form>
+      <div id="saved" hidden><span id="savedText"></span><button class="link" id="editName" type="button">EDIT NAME</button></div>
+    </div>
+    <div class="actions">
+      <button class="px ghost" id="homeBtn" type="button" hidden>HOME</button>
+      <button class="px" id="flyBtn" type="button">FLY</button>
+    </div>
+  </section>
+  <section id="right" class="card" aria-label="Top pilots">
+    <div class="cardHead"><span>TOP 10 PILOTS</span><span id="boardScope">THIS DEVICE</span></div>
     <ol id="boardList"></ol>
     <div id="boardNote" hidden></div>
-  </div>
-  <div id="msgSub">TAP TO FLY · HOLD TO CLIMB</div>
-  <div id="hint" hidden>Turn your phone sideways to see further ahead</div>
+  </section>
 </div>
 
 <script>
@@ -185,9 +259,10 @@
 
   const $ = (id) => document.getElementById(id);
   const cv = $('game');
-  const ctx = cv.getContext('2d');
-  const scoreEl = $('score'), hiEl = $('hi'), msg = $('msg'), msgTitle = $('msgTitle'),
-        msgSub = $('msgSub'), hint = $('hint'), muteBtn = $('mute'),
+  const mainCtx = cv.getContext('2d');
+  let ctx = mainCtx; // swapped briefly to draw the hangar preview
+  const scoreEl = $('score'), hiEl = $('hi'), overlay = $('overlay'), ovTitle = $('ovTitle'),
+        ovSub = $('ovSub'), hint = $('hint'), muteBtn = $('mute'),
         fuelEl = $('fuel'), fuelFill = $('fuelFill'), fuelLabel = $('fuelLabel');
 
   const TAU = Math.PI * 2;
@@ -231,7 +306,6 @@
     root.setProperty('--ink', P.ink);
   }
   const SUN = '#f4c24a', SUN_LINE = '#dca12a', MOON = '#ebe6d2', FLAME = '#f39a2b', FLAME_CORE = '#ffe08a';
-  const PLAYER_LIVERY = '#3d7cc0';
 
   // ---------- world sizing ----------
   let cssW, cssH, dpr, S, W, H, groundY, playH, k, portrait, px;
@@ -508,6 +582,96 @@
     navLights(-19.5, -13, -16, 7.5, seed);
   }
 
+  function drawJumbo(liv, seed) {
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-20, -5.5); ctx.lineTo(-27, -19); ctx.lineTo(-32, -19); ctx.lineTo(-31.5, -5.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    ctx.moveTo(-32, -5.5); ctx.lineTo(4, -5.5);
+    ctx.bezierCurveTo(10, -5.5, 12, -9.5, 20, -9.5);
+    ctx.bezierCurveTo(28, -9.5, 33, -3, 33, 1);
+    ctx.bezierCurveTo(33, 4.5, 29, 5.5, 22, 5.5);
+    ctx.lineTo(-16, 5.5); ctx.lineTo(-32, -1.5); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-23, 1); ctx.lineTo(30.5, 1); ctx.lineTo(32, 2.6); ctx.lineTo(-20, 2.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.ink;
+    for (let wx = -17; wx <= 22; wx += 3) ctx.fillRect(wx, -3, 1.4, 1.7);
+    for (let wx = 11; wx <= 22; wx += 3) ctx.fillRect(wx, -7.6, 1.4, 1.5);
+    ctx.beginPath(); ctx.moveTo(25, -8); ctx.lineTo(28.5, -7); ctx.lineTo(30, -5.2); ctx.lineTo(25.5, -5.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.body;
+    ctx.beginPath(); ctx.moveTo(-23, -2); ctx.lineTo(-34, -6); ctx.lineTo(-35, -3.5); ctx.lineTo(-26, 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.moveTo(9, 2.5); ctx.lineTo(-7, 12.5); ctx.lineTo(-12.5, 12.5); ctx.lineTo(-1, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    for (const [ex, ey, ew] of [[-6, 10.5, 9], [3, 7, 10.5]]) {
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(ex, ey, ew, 4.2, 2); else ctx.rect(ex, ey, ew, 4.2);
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = P.ink; ctx.fillRect(2.2, 11.3, 1.1, 2.4); ctx.fillRect(12.3, 7.8, 1.1, 2.6);
+    navLights(-30, -19, -12.5, 12.5, seed);
+  }
+
+  function drawBizjet(liv, seed) {
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-12, -3.8); ctx.lineTo(-17, -14); ctx.lineTo(-21, -14); ctx.lineTo(-21, -3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-15.5, -14); ctx.lineTo(-25, -15.8); ctx.lineTo(-25.5, -13.4); ctx.lineTo(-17, -12.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    ctx.moveTo(-22, -3.5); ctx.lineTo(12, -4);
+    ctx.bezierCurveTo(18, -4, 22, -1.5, 22.5, 1);
+    ctx.bezierCurveTo(22, 3, 18, 4, 12, 4);
+    ctx.lineTo(-10, 4); ctx.lineTo(-22, -0.5); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-18, 0.6); ctx.lineTo(21, 0.6); ctx.lineTo(22, 1.8); ctx.lineTo(-16, 1.8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.ink;
+    for (let wx = -4; wx <= 10; wx += 3.4) { ctx.beginPath(); ctx.ellipse(wx, -1.6, 0.9, 1.1, 0, 0, TAU); ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(15.5, -3.2); ctx.lineTo(19, -2.4); ctx.lineTo(20.5, -0.8); ctx.lineTo(16, -1); ctx.closePath(); ctx.fill();
+    // rear-mounted engine
+    ctx.beginPath(); ctx.moveTo(-9, -3.8); ctx.lineTo(-9, -4.4); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-15, -7.8, 10, 3.8, 1.9); else ctx.rect(-15, -7.8, 10, 3.8);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.ink; ctx.fillRect(-6, -7.1, 0.9, 2.4);
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.moveTo(3, 2); ctx.lineTo(-6, 8); ctx.lineTo(-9.5, 8); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, 8); ctx.lineTo(-9.5, 5); ctx.stroke();
+    navLights(-24, -15, -7.5, 8, seed);
+  }
+
+  function drawTurboprop(liv, seed) {
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-14, -4.5); ctx.lineTo(-20, -16); ctx.lineTo(-24, -16); ctx.lineTo(-24, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-18, -16); ctx.lineTo(-28, -17.6); ctx.lineTo(-28.5, -15.2); ctx.lineTo(-19.5, -14.4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-5, 3, 10, 3, 1.5); else ctx.rect(-5, 3, 10, 3);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-25, -4.5); ctx.lineTo(14, -4.5);
+    ctx.bezierCurveTo(21, -4.5, 25.5, -1.5, 26, 1);
+    ctx.bezierCurveTo(25.5, 3.5, 21, 4.5, 14, 4.5);
+    ctx.lineTo(-12, 4.5); ctx.lineTo(-25, -1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-20, 0.6); ctx.lineTo(24.5, 0.6); ctx.lineTo(25.5, 2); ctx.lineTo(-17, 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.ink;
+    for (let wx = -15; wx <= 12; wx += 3.6) ctx.fillRect(wx, -2.8, 1.8, 1.9);
+    ctx.beginPath(); ctx.moveTo(18, -3.4); ctx.lineTo(22, -2.4); ctx.lineTo(23.6, -0.6); ctx.lineTo(18.5, -0.8); ctx.closePath(); ctx.fill();
+    // high wing with the engine slung under it
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.rect(-8, -6.8, 17, 2.3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(1, -9, 12.5, 5, 2.2); else ctx.rect(1, -9, 12.5, 5);
+    ctx.fill(); ctx.stroke();
+    propDisc(14.5, -6.5, 8, 34);
+    navLights(-26, -17, -8, -6, seed);
+  }
+
   // top/bottom: how far each model reaches above/below its centre line (local units)
   const MODELS = {
     jet: { draw: drawJet, top: 17, bottom: 11,
@@ -522,17 +686,48 @@
     fighter: { draw: drawFighter, top: 13, bottom: 8,
       hit: [[25, 0.5], [12, -3.5], [7, -6], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
             [-18, 7], [-13, 7], [4, 3]] },
+    jumbo: { draw: drawJumbo, top: 19, bottom: 15,
+      hit: [[33, 1], [27, -8], [20, -9.5], [8, -6], [-20, -5.5], [-27, -18.5], [-32, -18.5], [-31.5, -5.5], [-34.5, -4],
+            [-30, -1], [-16, 5.5], [-12.5, 12.5], [-6, 14.5], [3, 14.5], [13.5, 11.4], [22, 5.5]] },
+    bizjet: { draw: drawBizjet, top: 16, bottom: 8,
+      hit: [[22.5, 1], [16, -3.8], [-5, -4], [-5, -7.6], [-15, -7.6], [-17, -14], [-25, -15.8], [-25.5, -13.4], [-21, -3.5],
+            [-22, -0.5], [-10, 4], [-9.5, 8], [-6, 8], [3, 4]] },
+    turboprop: { draw: drawTurboprop, top: 18, bottom: 6,
+      hit: [[26, 1], [20, -4.5], [15, -4.5], [15, -14.5], [14, -14.5], [1, -9], [-8, -6.8], [-14, -4.5], [-20, -16],
+            [-28, -17.6], [-28.5, -15.2], [-25, -4.5], [-25, -1], [-12, 4.5], [-5, 6], [5, 6], [20, 4.5]] },
   };
+
+  // Player hangar: plane types and liveries chosen on the home screen.
+  const PLANES = [
+    { id: 'airliner', label: 'AIRLINER', name: 'AIRLINER', model: 'jet', sc: 0.95 },
+    { id: 'jumbo', label: 'JUMBO', name: 'JUMBO JET', model: 'jumbo', sc: 0.82 },
+    { id: 'bizjet', label: 'BIZJET', name: 'BUSINESS JET', model: 'bizjet', sc: 1.05 },
+    { id: 'turboprop', label: 'PROP', name: 'TURBOPROP', model: 'turboprop', sc: 0.95 },
+  ];
+  const COLORS = [
+    { id: 'blue', name: 'Sky blue', c: '#3d7cc0' },
+    { id: 'red', name: 'Signal red', c: '#d0503c' },
+    { id: 'green', name: 'Pine green', c: '#3f8a5a' },
+    { id: 'orange', name: 'Sunset orange', c: '#e08a2c' },
+    { id: 'purple', name: 'Royal purple', c: '#7a5bb5' },
+    { id: 'charcoal', name: 'Charcoal', c: '#3a3f47' },
+  ];
+  const colorById = (id) => COLORS.find((c) => c.id === id) || null;
+  const choice = {
+    plane: PLANES.find((p) => p.id === store.get('skyline-glide-plane')) || PLANES[0],
+    color: colorById(store.get('skyline-glide-color')) || COLORS[0],
+  };
+  const playerModel = () => MODELS[choice.plane.model];
 
   // Oncoming traffic by era: each unlocks at a score and is faster and more aggressive than the last.
   const TRAFFIC = [
-    { model: 'biplane', unlock: 0, v: [25, 55], sc: [0.95, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0,
+    { models: ['biplane'], unlock: 0, v: [25, 55], sc: [0.95, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0,
       liveries: ['#c9483a', '#d9a62e', '#3f7a4a'] },
-    { model: 'prop', unlock: 200, v: [55, 95], sc: [0.85, 0.95], track: 6, wobble: 2, gap: 1.0, warn: 0,
+    { models: ['prop', 'turboprop'], unlock: 200, v: [55, 95], sc: [0.85, 0.95], track: 6, wobble: 2, gap: 1.0, warn: 0,
       liveries: ['#2e6f9a', '#8a5a2b', '#b8433a'] },
-    { model: 'jet', unlock: 450, v: [95, 150], sc: [0.8, 0.95], track: 16, wobble: 0, gap: 0.95, warn: 0.5,
+    { models: ['jet', 'jet', 'jumbo', 'bizjet'], unlock: 450, v: [95, 150], sc: [0.8, 0.95], track: 16, wobble: 0, gap: 0.95, warn: 0.5,
       liveries: ['#d0503c', '#2e9a8a', '#e08a2c', '#7a5bb5', '#c23b6b'] },
-    { model: 'fighter', unlock: 800, v: [190, 260], sc: [0.95, 1.05], track: 55, wobble: 0, gap: 0.8, warn: 0.9,
+    { models: ['fighter'], unlock: 800, v: [190, 260], sc: [0.95, 1.05], track: 55, wobble: 0, gap: 0.8, warn: 0.9,
       liveries: ['#5b6670', '#4f6b4a', '#6a5a8a'] },
   ];
 
@@ -675,39 +870,57 @@
   }
 
   // ---------- pilots board ----------
-  // Backends, best first: claude.ai's shared store, a Supabase table, or this device only.
-  const panel = $('panel'), entry = $('entry'), nameIn = $('nameIn'), saveBtn = $('saveBtn'),
-        savedBox = $('saved'), savedText = $('savedText'), boardList = $('boardList'),
-        boardScope = $('boardScope'), boardNote = $('boardNote');
+  // All-time top 10, one row per pilot (their best run). Backends, best first:
+  // claude.ai's shared store, a Supabase table, or this device only.
+  const entry = $('entry'), nameIn = $('nameIn'), saveBtn = $('saveBtn'), savedBox = $('saved'),
+        savedText = $('savedText'), boardList = $('boardList'), boardScope = $('boardScope'), boardNote = $('boardNote');
   const cleanName = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
   const cleanScore = (n) => clamp(Math.floor(Number(n) || 0), 0, 99999);
+  const LOCAL_NOTE = 'Sign in on claude.ai to see the global board.';
   const Board = {
-    mode: 'local', rows: [], myId: null, readOnly: false, note: '',
+    mode: 'local', rows: [], myId: null, readOnly: false, note: LOCAL_NOTE,
     best: parseInt(store.get('skyline-glide-saved'), 10) || 0,
     name: cleanName(store.get('skyline-glide-name')),
-    db: null, localIdx: -1,
+    db: null,
   };
+  // Keep each pilot's best only, highest first.
+  function topPilots(rows) {
+    const best = new Map();
+    for (const r of rows) {
+      const key = r.id || r.name;
+      if (!key) continue;
+      const prev = best.get(key);
+      if (!prev || r.score > prev.score) best.set(key, r);
+    }
+    return [...best.values()].sort((a, b) => b.score - a.score).slice(0, 10);
+  }
   function loadLocalRows() {
-    try { return (JSON.parse(store.get('skyline-glide-board')) || []).map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score) })); }
-    catch (e) { return []; }
+    try {
+      return topPilots((JSON.parse(store.get('skyline-glide-board')) || [])
+        .map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score), color: colorById(r.color) ? r.color : '' })));
+    } catch (e) { return []; }
   }
   Board.rows = loadLocalRows();
 
   function renderBoard() {
-    boardScope.textContent = Board.mode === 'local' ? 'THIS DEVICE' : 'GLOBAL';
+    boardScope.textContent = Board.mode === 'local' ? 'THIS DEVICE' : 'GLOBAL · ALL TIME';
     boardList.textContent = '';
     if (!Board.rows.length) {
       const li = document.createElement('li');
       li.className = 'none';
-      li.textContent = 'No scores yet. Fly to set the first one.';
+      li.textContent = Board.mode === 'local' ? 'No scores yet. Fly to set the first one.' : 'No pilots yet. Be the first on the global board.';
       boardList.appendChild(li);
     }
     Board.rows.forEach((r, i) => {
       const li = document.createElement('li');
-      if ((Board.mode === 'db' && r.id && r.id === Board.myId) || (Board.mode !== 'db' && i === Board.localIdx)) li.className = 'me';
-      for (const text of [String(i + 1) + '.', r.name || 'PILOT', pad(r.score)]) {
-        const s = document.createElement('span'); s.textContent = text; li.appendChild(s);
-      }
+      const mine = Board.mode === 'db' ? r.id && r.id === Board.myId : r.name && r.name === Board.name;
+      if (mine) li.className = 'me';
+      const rank = document.createElement('span'); rank.textContent = String(i + 1) + '.';
+      const dot = document.createElement('span'); dot.className = 'dot';
+      const col = colorById(r.color); if (col) dot.style.setProperty('--c', col.c);
+      const who = document.createElement('span'); who.className = 'who'; who.textContent = r.name || 'PILOT';
+      const pts = document.createElement('span'); pts.textContent = pad(r.score);
+      li.append(rank, dot, who, pts);
       boardList.appendChild(li);
     });
     boardNote.hidden = !Board.note;
@@ -716,11 +929,11 @@
 
   async function remoteFetch() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=10`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=200`, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       });
       if (!res.ok) throw new Error(res.status);
-      Board.rows = (await res.json()).map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score) }));
+      Board.rows = topPilots((await res.json()).map((r) => ({ name: cleanName(r.name), score: cleanScore(r.score) })));
       Board.note = '';
     } catch (e) {
       Board.note = 'The global board is offline right now. Your scores still count here.';
@@ -730,7 +943,7 @@
 
   async function initBoard() {
     renderBoard();
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) { Board.mode = 'remote'; Board.rows = []; remoteFetch(); }
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) { Board.mode = 'remote'; Board.rows = []; Board.note = ''; remoteFetch(); }
     const c = window.claude;
     if (!c || typeof c.use !== 'function') return;
     let db = null, user = null;
@@ -742,11 +955,14 @@
     try { canWrite = user ? await user.can('data.write') : null; } catch (e) { canWrite = null; }
     if (!Board.myId || canWrite === false) {
       Board.readOnly = true;
-      Board.note = 'You can see the board, but only people the owner invites can post scores.';
+      Board.note = 'You can see the global board, but only pilots the owner invites can post scores.';
     }
     renderBoard();
     db.collection('scores').orderBy('score', 'desc').limit(10).onSnapshot((snap) => {
-      Board.rows = snap.docs.map((d) => { const v = d.data() || {}; return { id: d.id, name: cleanName(v.name), score: cleanScore(v.score) }; });
+      Board.rows = snap.docs.map((d) => {
+        const v = d.data() || {};
+        return { id: d.id, name: cleanName(v.name), score: cleanScore(v.score), color: colorById(v.color) ? v.color : '' };
+      });
       renderBoard();
     }, () => { Board.note = 'The global board stopped updating. Reload the page to reconnect.'; renderBoard(); });
     if (Board.myId) {
@@ -761,14 +977,26 @@
     }
   }
 
+  function saveLocal(rows) {
+    Board.rows = topPilots(rows);
+    store.set('skyline-glide-board', JSON.stringify(Board.rows));
+  }
+
   let pendingScore = 0, saving = false;
+  function showSaved(name) {
+    entry.hidden = true;
+    savedText.textContent = `SAVED AS ${name}`;
+    savedBox.hidden = false;
+    $('editName').hidden = Board.mode === 'remote';
+  }
   async function submitScore(name, value) {
     if (saving) return;
     saving = true; saveBtn.disabled = true;
+    const prevName = Board.name;
     Board.name = name; store.set('skyline-glide-name', name);
     try {
       if (Board.mode === 'db') {
-        await Board.db.doc('scores/' + Board.myId).set({ name, score: value, at: Date.now() });
+        await Board.db.doc('scores/' + Board.myId).set({ name, score: value, at: Date.now(), plane: choice.plane.id, color: choice.color.id });
       } else if (Board.mode === 'remote') {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
           method: 'POST',
@@ -778,26 +1006,19 @@
         if (!res.ok) throw { code: 'remote' };
         remoteFetch();
       } else {
-        const rows = loadLocalRows();
-        const row = { name, score: value };
-        rows.push(row);
-        rows.sort((a, b) => b.score - a.score);
-        Board.localIdx = rows.indexOf(row);
-        Board.rows = rows.slice(0, 10);
-        if (Board.localIdx >= 10) Board.localIdx = -1;
-        store.set('skyline-glide-board', JSON.stringify(Board.rows));
+        // A renamed pilot keeps one row under the new name.
+        const rows = loadLocalRows().filter((r) => r.name !== prevName || prevName === name);
+        rows.push({ name, score: value, color: choice.color.id });
+        saveLocal(rows);
       }
       Board.best = Math.max(Board.best, value);
       if (Board.mode !== 'db') store.set('skyline-glide-saved', String(Board.best));
       pendingScore = 0;
-      entry.hidden = true;
-      savedText.textContent = `SAVED AS ${name}`;
-      savedBox.hidden = false;
-      $('editName').hidden = Board.mode === 'remote';
+      showSaved(name);
     } catch (e) {
       if (e && e.code === 'invalid_argument') {
         Board.readOnly = true;
-        Board.note = 'You can see the board, but only people the owner invites can post scores.';
+        Board.note = 'You can see the global board, but only pilots the owner invites can post scores.';
         entry.hidden = true;
       } else if (e && e.code === 'quota_exceeded') {
         Board.note = 'The board is full, so this score was not saved.';
@@ -814,16 +1035,8 @@
     if (!name) { nameIn.focus(); return; }
     nameIn.blur();
     if (pendingScore) submitScore(name, pendingScore);
-    else if (Board.mode === 'db' && Board.best) submitScore(name, Board.best);
-    else {
-      Board.name = name; store.set('skyline-glide-name', name);
-      if (Board.mode === 'local' && Board.localIdx >= 0) {
-        Board.rows[Board.localIdx].name = name;
-        store.set('skyline-glide-board', JSON.stringify(Board.rows));
-      }
-      entry.hidden = true; savedText.textContent = `SAVED AS ${name}`; savedBox.hidden = false;
-      renderBoard();
-    }
+    else if (Board.best && Board.mode !== 'remote') submitScore(name, Board.best);
+    else { Board.name = name; store.set('skyline-glide-name', name); showSaved(name); renderBoard(); }
   });
   $('editName').addEventListener('click', () => {
     savedBox.hidden = true;
@@ -834,7 +1047,7 @@
   });
 
   function showBoardAfterRun(final) {
-    entry.hidden = true; savedBox.hidden = true;
+    entry.hidden = true; savedBox.hidden = true; pendingScore = 0;
     const isBest = final > 0 && final > Board.best && !Board.readOnly;
     if (isBest) {
       pendingScore = final;
@@ -846,6 +1059,47 @@
       }
     }
     renderBoard();
+  }
+
+  // ---------- hangar ----------
+  const hangarEl = $('hangar'), resultEl = $('result'), flyBtn = $('flyBtn'), homeBtn = $('homeBtn');
+  const chipsEl = $('planeChips'), swatchesEl = $('swatches');
+  const pv = $('preview'), pctx = pv.getContext('2d');
+  for (const p of PLANES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = p.label; b.dataset.id = p.id;
+    b.setAttribute('aria-label', p.name);
+    b.addEventListener('click', () => { choice.plane = p; store.set('skyline-glide-plane', p.id); renderHangar(); });
+    chipsEl.appendChild(b);
+  }
+  for (const c of COLORS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'swatch'; b.dataset.id = c.id;
+    b.style.setProperty('--c', c.c);
+    b.setAttribute('aria-label', c.name);
+    b.addEventListener('click', () => { choice.color = c; store.set('skyline-glide-color', c.id); renderHangar(); });
+    swatchesEl.appendChild(b);
+  }
+  function renderHangar() {
+    for (const b of chipsEl.children) b.setAttribute('aria-pressed', String(b.dataset.id === choice.plane.id));
+    for (const b of swatchesEl.children) b.setAttribute('aria-pressed', String(b.dataset.id === choice.color.id));
+    $('planeName').textContent = choice.plane.name;
+  }
+  function drawPreview() {
+    const w = pv.clientWidth, h = pv.clientHeight;
+    if (!w || !h) return;
+    if (pv.width !== Math.round(w * dpr) || pv.height !== Math.round(h * dpr)) { pv.width = Math.round(w * dpr); pv.height = Math.round(h * dpr); }
+    const m = playerModel();
+    const sc = Math.min(w / 84, h / (m.top + m.bottom + 6));
+    ctx = pctx;
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pctx.clearRect(0, 0, w, h);
+    const cy = h / 2 + (m.top - m.bottom) / 2 * sc + Math.sin(t * 2.4) * 2;
+    ctx.fillStyle = P.mid;
+    for (let i = 1; i <= 5; i++) { ctx.globalAlpha = 0.6 - i * 0.1; ctx.fillRect(w / 2 - 36 * sc - i * 7, cy + 2 * sc - 1, 2, 2); }
+    ctx.globalAlpha = 1;
+    drawModel(m, w / 2, cy, Math.cos(t * 2.4) * -0.04, 1, sc, choice.color.c, 3);
+    ctx = mainCtx;
   }
 
   // ---------- game flow ----------
@@ -860,20 +1114,47 @@
   }
   function start() {
     state = 'playing';
-    msg.hidden = true; hint.hidden = true; fuelEl.hidden = false;
-    if (document.activeElement === nameIn) nameIn.blur();
+    overlay.hidden = true; fuelEl.hidden = false;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
-  function press() {
-    audio();
-    if (state === 'ready') { reset(); start(); }
-    else if (state === 'over') { if (overT < 0.5) return; reset(); start(); }
-    if (state !== 'playing') return;
+  function flap() {
     if (fuelOut) { sfx.sputter(); return; }
     player.vy = Math.min(player.vy, -270 * k);
     fuel -= FUEL.tap;
     if (fuel <= 0) { fuel = 0; fuelOut = true; }
     sfx.flap();
   }
+  function launch() { audio(); reset(); start(); flap(); }
+  function press() {
+    if (state === 'ready' || (state === 'over' && overT >= 0.5)) return launch();
+    if (state === 'playing') flap();
+  }
+  function showHome() {
+    state = 'ready';
+    reset();
+    shownScore = -1;
+    ovTitle.textContent = 'SKYLINE GLIDE';
+    ovSub.textContent = 'TAP ANYWHERE TO FLY · HOLD TO CLIMB';
+    hangarEl.hidden = false; resultEl.hidden = true;
+    homeBtn.hidden = true; flyBtn.textContent = 'FLY';
+    hint.hidden = !portrait;
+    fuelEl.hidden = true;
+    overlay.hidden = false;
+    renderHangar(); renderBoard();
+  }
+  function showOver() {
+    ovTitle.textContent = 'GAME OVER';
+    ovSub.textContent = 'TAP ANYWHERE TO FLY AGAIN';
+    $('finalScore').textContent = pad(score);
+    hangarEl.hidden = true; resultEl.hidden = false;
+    homeBtn.hidden = false; flyBtn.textContent = 'FLY AGAIN';
+    hint.hidden = true;
+    fuelEl.hidden = true;
+    overlay.hidden = false;
+    showBoardAfterRun(score);
+  }
+  flyBtn.addEventListener('click', () => { if (state !== 'playing') launch(); });
+  homeBtn.addEventListener('click', showHome);
   function crash() {
     state = 'over'; overT = 0;
     sfx.crash();
@@ -883,11 +1164,7 @@
     }
     if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
     hiEl.textContent = 'HI ' + pad(hi);
-    msgTitle.textContent = 'GAME OVER';
-    msgSub.textContent = 'TAP ANYWHERE TO FLY AGAIN';
-    fuelEl.hidden = true;
-    msg.hidden = false;
-    showBoardAfterRun(score);
+    showOver();
   }
 
   function pickTraffic() {
@@ -896,7 +1173,7 @@
     return open.length > 1 && Math.random() < 0.4 ? pick(open.slice(0, -1)) : newest;
   }
   function trySpawnEnemy(diff) {
-    const tr = pickTraffic(), m = MODELS[tr.model];
+    const tr = pickTraffic(), m = MODELS[pick(tr.models)];
     const sc = rand(tr.sc[0], tr.sc[1]);
     const v = rand(tr.v[0], tr.v[1] + 30 * diff);
     // Start far enough right that a warning shows for tr.warn seconds before it appears.
@@ -1002,7 +1279,7 @@
     if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; }
 
     // collisions
-    const poly = modelPoly(MODELS.jet, px, player.y, player.angle, 1, 0.95);
+    const poly = modelPoly(playerModel(), px, player.y, player.angle, 1, choice.plane.sc);
     for (const p of poly) if (p[1] >= groundY) return crash();
     for (const c of clusters) {
       if (c.x > px + 40 || c.x + c.width < px - 40) continue;
@@ -1093,7 +1370,7 @@
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
     ctx.globalAlpha = 1;
-    drawModel(MODELS.jet, px, player.y, player.angle, 1, 0.95, PLAYER_LIVERY, 7);
+    drawModel(playerModel(), px, player.y, player.angle, 1, choice.plane.sc, choice.color.c, 7);
 
     for (const p of puffs) {
       ctx.globalAlpha = Math.max(0, p.life);
@@ -1118,8 +1395,8 @@
   }
 
   // ---------- input ----------
-  // Controls on the board keep their taps; a tap anywhere else, the board's background included, flies.
-  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute, #panel button, #panel input, #panel label, #boardList');
+  // Taps on the menu cards stay with the cards; a tap anywhere else flies.
+  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute, .card');
   window.addEventListener('pointerdown', (e) => {
     if (isUi(e)) return;
     e.preventDefault();
@@ -1135,7 +1412,7 @@
   window.addEventListener('contextmenu', (e) => { if (!isUi(e)) e.preventDefault(); });
   const isFlyKey = (e) => e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW';
   window.addEventListener('keydown', (e) => {
-    if (e.target === nameIn || !isFlyKey(e)) return;
+    if (!isFlyKey(e) || (e.target && e.target.closest && e.target.closest('input, button'))) return;
     e.preventDefault();
     if (!e.repeat) { keyHeld = true; press(); }
   });
@@ -1156,13 +1433,14 @@
     last = now;
     update(dt);
     draw();
+    if (!overlay.hidden && !hangarEl.hidden) drawPreview();
     requestAnimationFrame(frame);
   }
 
   updatePalette(0);
   resize();
   initScenery();
-  reset();
+  showHome();
   renderMute();
   hiEl.textContent = 'HI ' + pad(hi);
   window.addEventListener('resize', resize);

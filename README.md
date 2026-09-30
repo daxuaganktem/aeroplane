@@ -2,6 +2,7 @@
 
 A one-button, mobile-first browser game: fly a little airliner over city tower clusters and dodge oncoming traffic.
 
+- **Home screen hangar:** pick an airliner, jumbo jet, business jet or turboprop, and one of six liveries. The crash screen has **Fly again** and **Home**.
 - **Tap** anywhere to climb, **hold** to keep climbing (Space / ↑ on desktop).
 - **Fuel:** taps sip fuel, holding burns it fast, and it refills while you're off the throttle. Run dry and the engine cuts out until the tank is back to a quarter.
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops.
@@ -12,7 +13,7 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 
 ## Top pilots board
 
-When you set a new personal best, the game asks for your name once, then saves future bests under it automatically. It picks a backend in this order:
+The board shows the all-time top 10 pilots, one row per pilot (their best run). When you set a new personal best, the game asks for your name once, then saves future bests under it automatically. It picks a backend in this order:
 
 1. **claude.ai artifact.** A board shared by everyone who opens the page. Anyone signed in can read it. Posting needs the owner, an invited Editor, or a Contributor on a team plan.
 2. **Supabase (optional, free).** Makes the board global anywhere you host `index.html`, like GitHub Pages. See below.
