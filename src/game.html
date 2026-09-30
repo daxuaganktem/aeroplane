@@ -468,7 +468,7 @@
   // Now and then a famous-shaped cluster replaces an ordinary one.
   const LANDMARKS = { twin: 'TWIN TOWERS', stadium: 'STADIUM', tvtower: 'TV TOWER', clock: 'CLOCK TOWER', pyramid: 'PYRAMID TOWER' };
   let lastLandmark = '', sinceLandmark = 0;
-  let locks = [], laserTimer = 0, speedTier = 0, tapLevel = 0;
+  let locks = [], laserTimer = 0, speedTier = 0, tapLevel = 0, jetFx = [], shake = 0, flash = 0;
   const baseTower = (extra) => Object.assign({ dx: 0, w: 40, shape: 'block', extra: 'none', shade: randi(0, 2), o: 1,
     seed: randi(1, 1e9), style: 0, awning: pick(AWNINGS), beacon: true }, extra);
   // Landmarks that always turn up in a run, timed to reach the player at this score.
@@ -1433,7 +1433,7 @@
     { id: 'concorde', unlock: 1000, v: [220, 280], sc: [0.9, 1], track: 8, wobble: 0, gap: 0.9, warn: 0.9 },
     { id: 'fighter', unlock: 1200, v: [190, 260], sc: [0.78, 0.86], track: 55, wobble: 0, gap: 0.8, warn: 0.9 },
     { id: 'stealth', unlock: 1600, v: [260, 330], sc: [1.05, 1.15], track: 35, wobble: 0, gap: 0.85, warn: 0.8 },
-    { id: 'interceptor', unlock: 2000, v: [650, 750], sc: [1, 1.08], track: 0, wobble: 0, gap: 1, warn: 0, special: 'laser' },
+    { id: 'interceptor', unlock: 1500, v: [330, 410], sc: [1.3, 1.4], track: 0, wobble: 0, gap: 1, warn: 0, special: 'laser' },
   ];
   const INTERCEPTOR = TRAFFIC.find((m) => m.special === 'laser');
   // Speed steps up every 500 points; tapping a lot calls in more traffic.
@@ -1557,13 +1557,31 @@
     g.gain.setValueAtTime(vol, n); g.gain.exponentialRampToValueAtTime(0.0001, n + dur);
     o.connect(g).connect(actx.destination); o.start(n); o.stop(n + dur + 0.02);
   }
+  let noiseBuf = null;
+  // filtered white noise swept from f1 to f2 Hz, for roars and booms
+  function noise(dur, f1, f2, vol, delay = 0) {
+    if (muted || !actx) return;
+    if (!noiseBuf) {
+      noiseBuf = actx.createBuffer(1, actx.sampleRate * 1.5, actx.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(), n = actx.currentTime + delay;
+    src.buffer = noiseBuf; f.type = 'bandpass'; f.Q.value = 0.8;
+    f.frequency.setValueAtTime(f1, n); f.frequency.exponentialRampToValueAtTime(f2, n + dur);
+    g.gain.setValueAtTime(0.0001, n); g.gain.exponentialRampToValueAtTime(vol, n + Math.min(0.08, dur / 4)); g.gain.exponentialRampToValueAtTime(0.0001, n + dur);
+    src.connect(f).connect(g).connect(actx.destination); src.start(n); src.stop(n + dur + 0.02);
+  }
   const sfx = {
     flap: () => tone(360, 560, 0.07, 'square', 0.02),
     sputter: () => { tone(120, 70, 0.06, 'square', 0.03); tone(110, 60, 0.06, 'square', 0.03, 0.08); },
     point: () => { tone(880, 0, 0.07, 'square', 0.03); tone(1320, 0, 0.12, 'square', 0.03, 0.09); },
     crash: () => tone(240, 50, 0.4, 'sawtooth', 0.05),
     lockBeep: (hi) => tone(hi ? 1760 : 1320, 0, hi ? 0.05 : 0.07, 'square', 0.025),
-    whoosh: () => tone(900, 120, 0.45, 'sawtooth', 0.035),
+    // danger klaxon when a lock starts, a rising chirp when it locks, a roar and a boom when the jet comes
+    alert: () => { for (let i = 0; i < 4; i++) tone(i % 2 ? 620 : 930, i % 2 ? 560 : 1000, 0.17, 'sawtooth', 0.04, i * 0.19); },
+    locked: () => { tone(900, 2200, 0.12, 'square', 0.035); tone(2200, 0, 0.28, 'square', 0.03, 0.13); },
+    jet: () => { noise(1.1, 4200, 250, 0.16); tone(420, 55, 0.9, 'sawtooth', 0.03); },
+    boom: () => { noise(0.45, 260, 50, 0.3); tone(90, 35, 0.4, 'sine', 0.12); },
     levelUp: () => { tone(520, 0, 0.08, 'square', 0.03); tone(780, 0, 0.08, 'square', 0.03, 0.09); tone(1040, 0, 0.14, 'square', 0.03, 0.18); },
   };
   function renderMute() {
@@ -2274,7 +2292,7 @@
 
   // ---------- game flow ----------
   function reset() {
-    clusters = []; enemies = []; puffs = []; trail = []; locks = [];
+    clusters = []; enemies = []; puffs = []; trail = []; locks = []; jetFx = []; shake = 0; flash = 0;
     laserTimer = 2; speedTier = 0; tapLevel = 0;
     elapsed = 0; dist = 0; score = 0; lastMilestone = 0; lastHf = 0.35;
     speed = baseSpeed(); spawnCursor = W + 120; enemyTimer = 3.5;
@@ -2400,8 +2418,9 @@
     const sc = rand(INTERCEPTOR.sc[0], INTERCEPTOR.sc[1]), m = CRAFT[INTERCEPTOR.id];
     const [yMin, yMax] = laneFor(m, sc);
     if (yMax < yMin) { laserTimer = 0.8; return; }
-    locks.push({ t: 0, y: clamp(player.y, yMin, yMax), sc, beep: 0 });
-    const extra = Math.min(3, Math.floor((score - 2000) / 500));
+    locks.push({ t: 0, y: clamp(player.y, yMin, yMax), sc, beep: 0.45 });
+    sfx.alert(); buzz();
+    const extra = Math.min(3, Math.floor((score - INTERCEPTOR.unlock) / 500));
     laserTimer = (rand(5, 8) - extra * 1.1) * (1 - 0.3 * tapPressure());
   }
   const LOCK_TRACK = 1.0, LOCK_FIRE = 1.55;
@@ -2411,15 +2430,19 @@
       const m = CRAFT[INTERCEPTOR.id], [yMin, yMax] = laneFor(m, L.sc);
       const aim = yMax < yMin ? player.y : clamp(player.y, yMin, yMax);
       if (L.t < LOCK_TRACK) L.y += clamp(aim - L.y, -260 * k * dt, 260 * k * dt);
+      if (L.t >= LOCK_TRACK && !L.chirped) { L.chirped = true; L.beep = 0.3; sfx.locked(); }
       L.beep -= dt;
       if (L.beep <= 0) { L.beep = L.t < LOCK_TRACK ? 0.25 : 0.1; sfx.lockBeep(L.t >= LOCK_TRACK); }
       if (L.t >= LOCK_FIRE) {
+        // no clear line through the towers yet: hold the lock a little longer, then give up
+        if (yMax < yMin) { if (L.t > LOCK_FIRE + 2) L.done = true; continue; }
         L.done = true;
-        if (yMax < yMin) continue; // no clear line through the towers: the jet breaks off
         const y = clamp(L.y, yMin, yMax);
-        enemies.push({ x: W + 40, prevX: W + 40, base: y, y, yMin: y, yMax: y, v: rand(INTERCEPTOR.v[0], INTERCEPTOR.v[1]),
-                       sc: L.sc, tr: INTERCEPTOR, m, liv: '#c8402f', seed: 0, laser: true });
-        sfx.whoosh(); buzz();
+        enemies.push({ x: W + 30, prevX: W + 30, base: y, y, yMin: y, yMax: y, v: rand(INTERCEPTOR.v[0], INTERCEPTOR.v[1]),
+                       sc: L.sc, tr: INTERCEPTOR, m, liv: '#c8402f', seed: 0, laser: true, age: 0 });
+        jetFx.push({ kind: 'ring', x: W - 4, y, r: 6, a: 1 });
+        sfx.jet(); sfx.boom(); buzz(true);
+        shake = Math.max(shake, 0.25);
       }
     }
     locks = locks.filter((L) => !L.done);
@@ -2526,6 +2549,26 @@
     if (enemyTimer <= 0 && elapsed > 3) trySpawnEnemy(diff);
     if (score >= INTERCEPTOR.unlock) { laserTimer -= dt; if (laserTimer <= 0) tryLock(); }
     updateLocks(dt);
+    for (const e of enemies) {
+      if (!e.laser) continue;
+      e.age += dt;
+      const tx = e.x + 24 * e.sc, ty = e.y + 0.2 * e.sc;
+      if (e.x < W + 20 && e.x > -60) {
+        for (let i = 0; i < 3; i++) jetFx.push({ kind: 'smoke', x: tx + rand(0, 14), y: ty + rand(-1.5, 1.5), r: rand(2.5, 4) * e.sc, a: 0.55, life: 1 });
+        jetFx.push({ kind: 'spark', x: tx + rand(4, 20), y: ty + rand(-2, 2), vx: rand(60, 160), vy: rand(-30, 30), a: 1, life: 0.35 });
+      }
+      if (!e.boomed && e.x < px + 30) {
+        e.boomed = true;
+        if (Math.abs(e.y - player.y) < 90) { shake = Math.max(shake, 0.45); flash = 0.35; sfx.boom(); buzz(true); }
+      }
+    }
+    for (const f of jetFx) {
+      if (f.kind === 'smoke') { f.x -= speed * dt; f.r += 16 * dt; f.a -= dt * 0.6; }
+      else if (f.kind === 'spark') { f.x += (f.vx - speed) * dt; f.y += f.vy * dt; f.a -= dt / f.life; }
+      else if (f.kind === 'ring') { f.r += 260 * dt; f.a -= dt * 1.8; }
+    }
+    jetFx = jetFx.filter((f) => f.a > 0);
+    shake = Math.max(0, shake - dt); flash = Math.max(0, flash - dt);
 
     trailTimer -= dt;
     if (trailTimer <= 0 && !fuelOut) {
@@ -2554,6 +2597,71 @@
         if (polyHitsPoly(poly, modelPoly(e.m, x, e.y, 0, -1, e.sc))) return crash();
       }
     }
+  }
+
+  // Laser interceptor: motion ghosts, wingtip vapour, a shock collar, and a long afterburner with shock diamonds.
+  function drawJetFx() {
+    for (const f of jetFx) {
+      if (f.kind === 'smoke') {
+        ctx.globalAlpha = Math.max(0, f.a) * 0.8; ctx.fillStyle = nightMix > 0.5 ? '#9aa3b4' : '#ffffff';
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill();
+      } else if (f.kind === 'spark') {
+        ctx.globalAlpha = Math.max(0, f.a); ctx.fillStyle = FLAME_CORE; ctx.fillRect(f.x, f.y, 2.2, 1.4);
+      } else if (f.kind === 'ring') {
+        ctx.globalAlpha = Math.max(0, f.a) * 0.8; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r * 0.45, f.r, 0, 0, TAU); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawJet(e) {
+    const sc = e.sc, tx = e.x + 24 * sc, ty = e.y + 0.2 * sc, fl = 1 + Math.sin(t * 50) * 0.12;
+    // motion ghosts behind everything else
+    for (let i = 2; i >= 1; i--) {
+      ctx.globalAlpha = 0.14 * (3 - i);
+      drawCraftAt(e.m, e.x + i * 16 * sc, e.y, 0, -1, sc, e.liv, false);
+    }
+    ctx.globalAlpha = 1;
+    ctx.save();
+    // wingtip vapour trails
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(e.x + 20 * sc, e.y - 11 * sc); ctx.lineTo(e.x + 20 * sc + 90, e.y - 11 * sc);
+    ctx.moveTo(e.x + 12 * sc, e.y + 4 * sc); ctx.lineTo(e.x + 12 * sc + 70, e.y + 4 * sc);
+    ctx.stroke();
+    // afterburner: glow, flame, core and shock diamonds
+    const len = 46 * sc * fl;
+    const glow = ctx.createRadialGradient(tx + 6, ty, 1, tx + 6, ty, 26 * sc);
+    glow.addColorStop(0, 'rgba(255,190,90,0.55)'); glow.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(tx + 6, ty, 26 * sc, 0, TAU); ctx.fill();
+    const g = ctx.createLinearGradient(tx, ty, tx + len, ty);
+    g.addColorStop(0, '#fff3c4'); g.addColorStop(0.25, '#ffb43c'); g.addColorStop(0.7, 'rgba(255,90,30,0.7)'); g.addColorStop(1, 'rgba(255,60,20,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(tx, ty - 2.4 * sc); ctx.quadraticCurveTo(tx + len * 0.4, ty - 3.2 * sc, tx + len, ty);
+    ctx.quadraticCurveTo(tx + len * 0.4, ty + 3.2 * sc, tx, ty + 2.4 * sc); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      const dx = tx + (6 + i * 8) * sc, r = (1.6 - i * 0.3) * sc;
+      ctx.globalAlpha = 0.9 - i * 0.2;
+      ctx.beginPath(); ctx.moveTo(dx - r * 1.6, ty); ctx.lineTo(dx, ty - r); ctx.lineTo(dx + r * 1.6, ty); ctx.lineTo(dx, ty + r); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    drawCraftAt(e.m, e.x, e.y, 0, -1, sc, e.liv, false);
+    // shock collar (vapour cone) for the first moments after it goes supersonic
+    const c = clamp(1 - e.age / 0.6, 0, 1) * 0.5 + 0.18;
+    const cx = e.x + 2 * sc;
+    const cg = ctx.createLinearGradient(cx, 0, cx + 16 * sc, 0);
+    cg.addColorStop(0, `rgba(255,255,255,${c})`); cg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.moveTo(cx - 3 * sc, e.y);
+    ctx.quadraticCurveTo(cx + 2 * sc, e.y - 13 * sc, cx + 16 * sc, e.y - 15 * sc);
+    ctx.lineTo(cx + 16 * sc, e.y + 15 * sc);
+    ctx.quadraticCurveTo(cx + 2 * sc, e.y + 13 * sc, cx - 3 * sc, e.y); ctx.fill();
+    // glowing red targeting pod
+    ctx.fillStyle = `rgba(255,60,50,${0.5 + 0.5 * Math.abs(Math.sin(t * 20))})`;
+    ctx.beginPath(); ctx.arc(e.x - 17.7 * sc, e.y + 2 * sc, 2.2, 0, TAU); ctx.fill();
   }
 
   function drawLock(L) {
@@ -2601,6 +2709,7 @@
 
   function draw() {
     ctx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0);
+    if (shake > 0) ctx.translate(rand(-1, 1) * shake * 12, rand(-1, 1) * shake * 12);
     const sky = ctx.createLinearGradient(0, 0, 0, groundY);
     sky.addColorStop(0, P.skyTop); sky.addColorStop(1, P.sky);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, groundY);
@@ -2648,8 +2757,9 @@
       for (const tw of c.towers) drawTower(tw, c.x + tw.dx, towerTop(c, tw));
     }
 
+    drawJetFx();
     for (const e of enemies) {
-      if (e.x - 35 > W) {
+      if (e.x - 35 > W && !e.laser) {
         // incoming warning at the right edge
         if (Math.sin(t * 18) > -0.2) {
           ctx.fillStyle = '#d0503c';
@@ -2658,10 +2768,7 @@
         }
         continue;
       }
-      if (e.laser) {
-        ctx.fillStyle = 'rgba(255,255,255,0.55)';
-        for (let i = 0; i < 3; i++) ctx.fillRect(e.x + 30 * e.sc, e.y - 5 + i * 5, 40 + i * 14, 1.2);
-      }
+      if (e.laser) { drawJet(e); continue; }
       drawCraftAt(e.m, e.x, e.y, 0, -1, e.sc, e.liv, false);
     }
     for (const L of locks) drawLock(L);
@@ -2689,6 +2796,7 @@
       ctx.stroke();
     }
 
+    if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.6})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
     if (score !== shownScore) { shownScore = score; scoreEl.textContent = pad(score); }
     if (state === 'playing') renderFuel();
   }
