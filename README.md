@@ -11,7 +11,7 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 - Nineteen kinds of oncoming traffic join as your score climbs, each faster or more aggressive: hot-air balloons, biplanes and blimps (0), light planes (100), gliders (150), helicopters (200), turboprops (250), vintage propliners (300), camera drones that bob toward you (350), WWII fighters (450), business jets (550), regional jets (600), a grinning Beluga-style cargo jet (750), widebody airliners (800), jumbo jets (950), supersonic jets (1000), fighter jets that chase your altitude (1200) and stealth bombers (1600). A red chevron on the right edge warns you before fast ones arrive.
 - **Laser interceptors (from 2,000):** a red laser and target reticle lock onto your altitude for a second while it beeps, freeze (*LOCKED*), and then a jet streaks along the line far faster than anything else. Move off the line! They come more often every 500 points past 2,000, and all traffic arrives 25% more often past 2,000.
 - Day and night swap every 500 points.
-- **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in. The Twin Towers also appear in every run, reaching the plane at about 1,000 points (set in `GUARANTEED` in `src/game.html`). The landmarks are:
+- **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in. The Twin Towers also appear in every run, reaching the plane at about 900 points (set in `GUARANTEED` in `src/game.html`). The landmarks are:
   - Twin Towers
   - a stadium with floodlights and a crowd
   - a TV tower
