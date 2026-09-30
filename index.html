@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<title>Skyline Glide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+  /* Layout: one full-bleed canvas for the world, a DOM layer for score and messages.
+     Single deliberate look: Chrome-Dino greys that fade into a night palette as you fly. */
+  :root {
+    --sky: #f7f7f5;
+    --ink: #535353;
+    --pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    color-scheme: light;
+  }
+  html, body { height: 100%; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: var(--sky);
+    color: var(--ink);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    right: calc(env(safe-area-inset-right, 0px) + 16px);
+    display: flex;
+    gap: 1.4em;
+    font: clamp(10px, 2.6vw, 14px)/1 var(--pixel);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  #hi { opacity: 0.6; }
+  #mute {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+    left: calc(env(safe-area-inset-left, 0px) + 8px);
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    padding: 0; border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink);
+    opacity: 0.7; cursor: pointer;
+  }
+  #mute:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #msg {
+    position: fixed;
+    left: 50%; top: 36%;
+    transform: translate(-50%, -50%);
+    width: min(calc(100vw - 32px), 560px);
+    display: grid; justify-items: center; gap: 18px;
+    text-align: center;
+    pointer-events: none;
+  }
+  #msgTitle { font: clamp(14px, 4.4vw, 24px)/1.3 var(--pixel); letter-spacing: 0.22em; text-wrap: balance; }
+  #msgSub { font: clamp(8px, 2.3vw, 11px)/1.9 var(--pixel); letter-spacing: 0.12em; opacity: 0.8; animation: pulse 1.2s steps(2) infinite; }
+  #hint { font: clamp(7px, 2vw, 9px)/1.9 var(--pixel); letter-spacing: 0.08em; opacity: 0.55; max-width: 32ch; }
+  #retry { width: 40px; height: 36px; }
+  @media (orientation: portrait) { #msg { top: 24%; } }
+  .blink { animation: blink 0.25s steps(1) 4; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) {
+    #msgSub, .blink { animation: none; }
+  }
+</style>
+
+<canvas id="game" aria-label="Skyline Glide: tap to climb, hold to keep climbing"></canvas>
+<div id="hud"><span id="hi">HI 00000</span><span id="score">00000</span></div>
+<button id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+    <path id="waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>
+    <path id="cross" d="M17 9l5 6M22 9l-5 6" style="display:none"/>
+  </svg>
+</button>
+<div id="msg">
+  <div id="msgTitle">SKYLINE GLIDE</div>
+  <div id="retry" hidden><svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <rect x="1" y="1" width="38" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path d="M27 12a9 9 0 1 0 2 8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/>
+    <path d="M22 7l8 0 0 8z" fill="currentColor"/>
+  </svg></div>
+  <div id="msgSub">TAP TO FLY · HOLD TO CLIMB</div>
+  <div id="hint" hidden>Turn your phone sideways to see further ahead</div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const cv = $('game');
+  const ctx = cv.getContext('2d');
+  const scoreEl = $('score'), hiEl = $('hi'), msg = $('msg'), msgTitle = $('msgTitle'),
+        msgSub = $('msgSub'), retry = $('retry'), hint = $('hint'), muteBtn = $('mute');
+
+  const TAU = Math.PI * 2;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const randi = (a, b) => Math.floor(rand(a, b + 1));
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const pad = (n) => String(Math.min(n, 99999)).padStart(5, '0');
+  function hash(a, b, c) {
+    let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35) ^ Math.imul(c + 0x27d4eb2f, 0x165667b1);
+    h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+    h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+    return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+  }
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } },
+  };
+
+  // ---------- palette (day ↔ night) ----------
+  const DAY = { sky: '#f7f7f5', ink: '#535353', mid: '#9d9d9b', t0: '#efefed', t1: '#e6e6e4', t2: '#dddddb',
+                win: '#c4c4c2', lit: '#c4c4c2', cloud: '#ffffff', cloudLine: '#c9c9c7', body: '#ffffff', wing: '#dcdcda' };
+  const NIGHT = { sky: '#1d2029', ink: '#d4d4d2', mid: '#7a7f8b', t0: '#2b2f38', t1: '#31353f', t2: '#262a32',
+                  win: '#3b404b', lit: '#f2d27a', cloud: '#3a3f4b', cloudLine: '#5a5f6b', body: '#ecebe7', wing: '#a9aab0' };
+  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const DAYc = {}, NIGHTc = {};
+  for (const key in DAY) { DAYc[key] = hexRgb(DAY[key]); NIGHTc[key] = hexRgb(NIGHT[key]); }
+  const P = {};
+  let lastMix = -1;
+  function updatePalette(m) {
+    if (Math.abs(m - lastMix) < 0.002) return;
+    lastMix = m;
+    for (const key in DAYc) {
+      const a = DAYc[key], b = NIGHTc[key];
+      P[key] = `rgb(${Math.round(a[0] + (b[0] - a[0]) * m)},${Math.round(a[1] + (b[1] - a[1]) * m)},${Math.round(a[2] + (b[2] - a[2]) * m)})`;
+    }
+    const root = document.documentElement.style;
+    root.setProperty('--sky', P.sky);
+    root.setProperty('--ink', P.ink);
+  }
+  const SUN = '#f4c24a', SUN_LINE = '#dca12a', MOON = '#ebe6d2';
+  const PLAYER_LIVERY = '#3d7cc0';
+  const LIVERIES = ['#d0503c', '#2e9a8a', '#e08a2c', '#7a5bb5', '#c23b6b'];
+
+  // ---------- world sizing ----------
+  let cssW, cssH, dpr, S, W, H, groundY, playH, k, portrait, px;
+  function resize() {
+    cssW = window.innerWidth; cssH = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+    portrait = cssW < cssH * 0.9;
+    S = portrait ? cssW / 360 : Math.min(cssH / 380, cssW / 560);
+    W = cssW / S; H = cssH / S;
+    groundY = H - (portrait ? Math.max(44, H * 0.1) : 34);
+    playH = groundY;
+    k = playH / 340;
+    px = clamp(W * 0.2, 70, 150);
+    hint.hidden = !(portrait && state === 'ready');
+    player.y = clamp(player.y || playH * 0.42, 18, groundY - 14);
+  }
+
+  // ---------- state ----------
+  let state = 'ready', t = 0, elapsed = 0, speed = 0, dist = 0, score = 0, shownScore = -1;
+  let hi = parseInt(store.get('skyline-glide-hi'), 10) || 0;
+  let lastMilestone = 0, nightMix = 0, nightTarget = 0, nextToggle = 700;
+  let clusters = [], enemies = [], clouds = [], flocks = [], puffs = [], trail = [], stars = [];
+  let spawnCursor = 0, enemyTimer = 0, flockTimer = 3, groundOff = 0, trailTimer = 0, overT = 0, lastHf = 0.35;
+  const player = { y: 0, vy: 0, angle: 0 };
+  const pointers = new Set();
+  let keyHeld = false;
+  const holding = () => pointers.size > 0 || keyHeld;
+  const baseSpeed = () => (portrait ? 150 : 175);
+
+  // ---------- towers ----------
+  const SHAPES = ['block', 'stepped', 'spire', 'antenna', 'dome', 'slant', 'crown', 'block'];
+  const ornUnit = (hB) => Math.min(22, hB * 0.15);
+  function makeCluster(x, diff) {
+    const n = randi(2, 4);
+    let hf = rand(0.2, 0.5 + 0.14 * diff);
+    if (Math.abs(hf - lastHf) < 0.08) hf = clamp(hf + (hf > lastHf ? 0.1 : -0.1), 0.18, 0.64);
+    lastHf = hf;
+    const towers = [];
+    let dx = 0;
+    for (let i = 0; i < n; i++) {
+      const w = randi(30, 54);
+      towers.push({ dx, w, shape: pick(SHAPES), shade: randi(0, 2), o: rand(0.8, 1), seed: randi(1, 1e9), style: randi(0, 2) });
+      dx += w + randi(0, 3);
+    }
+    return { x, hf, towers, width: dx };
+  }
+
+  function towerRects(tw, x, y0) {
+    const w = tw.w, cx = x + w / 2, oH = ornUnit(groundY - y0) * tw.o;
+    const r = [[x, y0, w, groundY - y0]];
+    switch (tw.shape) {
+      case 'block': r.push([x + w * 0.55, y0 - oH * 0.35, w * 0.28, oH * 0.35]); break;
+      case 'stepped': r.push([x + w * 0.17, y0 - oH * 0.5, w * 0.66, oH * 0.5], [x + w * 0.32, y0 - oH, w * 0.36, oH * 0.5]); break;
+      case 'spire': r.push([x + w * 0.3, y0 - oH * 0.4, w * 0.4, oH * 0.4], [cx - 2, y0 - oH * 1.5, 4, oH * 1.1]); break;
+      case 'antenna': r.push([x + w * 0.35, y0 - 4, w * 0.3, 4], [cx - 2, y0 - oH * 1.6, 4, oH * 1.6]); break;
+      case 'dome': { const rx = w * 0.38, ry = Math.min(oH, rx);
+        r.push([cx - rx * 0.85, y0 - ry * 0.6, rx * 1.7, ry * 0.6], [cx - rx * 0.5, y0 - ry, rx, ry * 0.4]); break; }
+      case 'slant': r.push([x, y0 - oH * 0.8, w * 0.3, oH * 0.8], [x, y0 - oH * 0.4, w * 0.65, oH * 0.4]); break;
+      case 'crown': for (let m = 0; m < 3; m++) r.push([x + w * (0.08 + m * 0.32), y0 - oH * 0.4, w * 0.2, oH * 0.4]); break;
+    }
+    return r;
+  }
+
+  function drawTower(tw, x, y0) {
+    const w = tw.w, cx = x + w / 2, hB = groundY - y0, oH = ornUnit(hB) * tw.o;
+    const fill = P['t' + tw.shade];
+    ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = P.ink; ctx.fillStyle = fill;
+
+    // rooftop ornament, drawn first so the body's roof edge sits over it
+    ctx.beginPath();
+    let beacon = null;
+    switch (tw.shape) {
+      case 'block': ctx.rect(x + w * 0.55, y0 - oH * 0.35, w * 0.28, oH * 0.35); break;
+      case 'stepped': ctx.rect(x + w * 0.17, y0 - oH * 0.5, w * 0.66, oH * 0.5); ctx.rect(x + w * 0.32, y0 - oH, w * 0.36, oH * 0.5); break;
+      case 'spire':
+        ctx.moveTo(x + w * 0.2, y0); ctx.lineTo(cx, y0 - oH * 0.8); ctx.lineTo(x + w * 0.8, y0); ctx.closePath();
+        break;
+      case 'antenna': ctx.rect(x + w * 0.35, y0 - 4, w * 0.3, 4); beacon = [cx, y0 - oH * 1.6]; break;
+      case 'dome': { const rx = w * 0.38, ry = Math.min(oH, rx);
+        ctx.ellipse(cx, y0, rx, ry, 0, Math.PI, TAU); ctx.closePath(); break; }
+      case 'slant': ctx.moveTo(x, y0); ctx.lineTo(x, y0 - oH * 0.8); ctx.lineTo(x + w, y0); ctx.closePath(); break;
+      case 'crown': for (let m = 0; m < 3; m++) ctx.rect(x + w * (0.08 + m * 0.32), y0 - oH * 0.4, w * 0.2, oH * 0.4); break;
+    }
+    ctx.fill(); ctx.stroke();
+    if (tw.shape === 'spire') { ctx.beginPath(); ctx.moveTo(cx, y0 - oH * 0.8); ctx.lineTo(cx, y0 - oH * 1.5); ctx.stroke(); }
+    if (tw.shape === 'dome') { const ry = Math.min(oH, w * 0.38); ctx.beginPath(); ctx.moveTo(cx, y0 - ry); ctx.lineTo(cx, y0 - ry - 5); ctx.stroke(); }
+    if (beacon) {
+      ctx.beginPath(); ctx.moveTo(cx, y0 - 4); ctx.lineTo(cx, beacon[1]);
+      ctx.moveTo(cx - 4, y0 - oH * 1.1); ctx.lineTo(cx + 4, y0 - oH * 1.1); ctx.stroke();
+    }
+
+    // body
+    ctx.fillStyle = fill;
+    ctx.beginPath(); ctx.rect(x, y0, w, hB); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y0 + 3.5); ctx.lineTo(x + w, y0 + 3.5); ctx.lineWidth = 0.8; ctx.stroke();
+
+    // windows: two passes (unlit, then lit at night)
+    const night = nightMix > 0.02;
+    for (let pass = 0; pass < (night ? 2 : 1); pass++) {
+      ctx.fillStyle = pass ? P.lit : P.win;
+      if (tw.style === 0) {
+        const cols = Math.max(1, Math.floor((w - 8) / 7));
+        const sx = x + (w - (cols * 7 - 3.5)) / 2;
+        for (let r = 0, yy = y0 + 8; yy < groundY - 12; r++, yy += 8) {
+          for (let c = 0; c < cols; c++) {
+            if (hash(tw.seed, r, c) < 0.1) continue;
+            const lit = night && hash(tw.seed, r, c + 97) < 0.5;
+            if (lit !== !!pass) continue;
+            ctx.fillRect(sx + c * 7, yy, 3.5, 4);
+          }
+        }
+      } else if (tw.style === 1) {
+        const segs = Math.max(1, Math.floor((w - 8) / 6));
+        const sw = (w - 8) / segs;
+        for (let r = 0, yy = y0 + 8; yy < groundY - 12; r++, yy += 9) {
+          for (let c = 0; c < segs; c++) {
+            const lit = night && hash(tw.seed, r, c + 31) < 0.45;
+            if (lit !== !!pass) continue;
+            ctx.fillRect(x + 4 + c * sw, yy, sw + 0.3, 3);
+          }
+        }
+      } else {
+        const cols = Math.max(1, Math.floor((w - 6) / 7));
+        const sx = x + (w - (cols * 7 - 4)) / 2;
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0, yy = y0 + 7; yy < groundY - 12; r++, yy += 9) {
+            const lit = night && hash(tw.seed, r, c + 53) < 0.4;
+            if (lit !== !!pass) continue;
+            ctx.fillRect(sx + c * 7, yy, 4, Math.min(9, groundY - 12 - yy));
+          }
+        }
+      }
+    }
+    // entrance
+    ctx.fillStyle = P.win;
+    ctx.fillRect(cx - 4, groundY - 8, 8, 8);
+    if (beacon && Math.sin(t * 5 + tw.seed) > 0) {
+      ctx.fillStyle = '#e0412f';
+      ctx.beginPath(); ctx.arc(beacon[0], beacon[1], 1.8, 0, TAU); ctx.fill();
+    }
+  }
+
+  // ---------- planes ----------
+  // local coordinates: nose at +29, tail at -29, y down
+  const HIT = [[27, 1.5], [21, -4.5], [-18, -4.5], [-23, -15], [-27, -15], [-27, -5], [-26, -1], [-14, 4.5],
+               [-10, 10], [-6, 10], [2, 9.5], [10, 9.5], [18, 4.8]];
+  function planePoly(x, y, ang, flip, sc) {
+    const c = Math.cos(ang), s = Math.sin(ang);
+    return HIT.map(([lx, ly]) => {
+      const a = lx * flip * sc, b = ly * sc;
+      return [x + a * c - b * s, y + a * s + b * c];
+    });
+  }
+  function drawPlane(x, y, ang, flip, sc, liv) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(flip * sc, sc);
+    ctx.lineWidth = 1.3 / sc; ctx.lineJoin = 'round'; ctx.strokeStyle = P.ink;
+    // tail fin
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-17, -4.5); ctx.lineTo(-24, -16.5); ctx.lineTo(-28.5, -16.5); ctx.lineTo(-27.5, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // fuselage
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    ctx.moveTo(-28, -5); ctx.lineTo(18, -5);
+    ctx.bezierCurveTo(25, -5, 29, -1.5, 29, 1.5);
+    ctx.bezierCurveTo(29, 4, 25, 5, 18, 5);
+    ctx.lineTo(-14, 5); ctx.lineTo(-28, -1.5); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // cheatline
+    ctx.fillStyle = liv;
+    ctx.beginPath(); ctx.moveTo(-20, 0.8); ctx.lineTo(26, 0.8); ctx.lineTo(27.5, 2.2); ctx.lineTo(-17, 2.2); ctx.closePath(); ctx.fill();
+    // cabin windows
+    ctx.fillStyle = P.ink;
+    for (let wx = -13; wx <= 15; wx += 3.1) ctx.fillRect(wx, -2.6, 1.5, 1.7);
+    // cockpit
+    ctx.beginPath(); ctx.moveTo(21.5, -3.4); ctx.lineTo(25.5, -2.6); ctx.lineTo(27.2, -0.8); ctx.lineTo(22, -1); ctx.closePath(); ctx.fill();
+    // horizontal stabiliser
+    ctx.fillStyle = P.body;
+    ctx.beginPath(); ctx.moveTo(-19, -1.5); ctx.lineTo(-29.5, -5); ctx.lineTo(-30.5, -2.8); ctx.lineTo(-22, 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // wing
+    ctx.fillStyle = P.wing;
+    ctx.beginPath(); ctx.moveTo(6, 2.5); ctx.lineTo(-6, 11); ctx.lineTo(-10.5, 11); ctx.lineTo(-3, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // engine
+    ctx.fillStyle = P.body;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(0.5, 6, 10.5, 4.4, 2); else ctx.rect(0.5, 6, 10.5, 4.4);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.ink; ctx.fillRect(9.8, 6.9, 1.2, 2.6);
+    // navigation lights after dusk
+    if (nightMix > 0.3 && Math.sin(t * 6 + x * 0.01) > 0.3) {
+      ctx.fillStyle = '#e0412f'; ctx.beginPath(); ctx.arc(-26.5, -16.5, 1.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#5ee08a'; ctx.beginPath(); ctx.arc(-9.5, 11, 1.2, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- collision helpers ----------
+  function segRect(x1, y1, x2, y2, r) {
+    let t0 = 0, t1 = 1;
+    const dx = x2 - x1, dy = y2 - y1;
+    const p = [-dx, dx, -dy, dy];
+    const q = [x1 - r[0], r[0] + r[2] - x1, y1 - r[1], r[1] + r[3] - y1];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) { if (q[i] < 0) return false; continue; }
+      const tt = q[i] / p[i];
+      if (p[i] < 0) { if (tt > t1) return false; if (tt > t0) t0 = tt; }
+      else { if (tt < t0) return false; if (tt < t1) t1 = tt; }
+    }
+    return true;
+  }
+  const orient = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const segSeg = (a, b, c, d) => orient(a, b, c) * orient(a, b, d) < 0 && orient(c, d, a) * orient(c, d, b) < 0;
+  function polyHitsRect(poly, r) {
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      if (segRect(a[0], a[1], b[0], b[1], r)) return true;
+    }
+    return false;
+  }
+  function polyHitsPoly(A, B) {
+    for (let i = 0; i < A.length; i++) {
+      const a = A[i], b = A[(i + 1) % A.length];
+      for (let j = 0; j < B.length; j++) if (segSeg(a, b, B[j], B[(j + 1) % B.length])) return true;
+    }
+    return false;
+  }
+
+  // ---------- scenery ----------
+  function makeCloud(x, near) {
+    const wv = rand(46, 84);
+    const n = randi(3, 5);
+    const blobs = [];
+    for (let i = 0; i < n; i++) {
+      const f = n === 1 ? 0.5 : i / (n - 1);
+      const r = (0.55 + Math.sin(f * Math.PI) * 0.6) * rand(9, 13);
+      blobs.push({ x: -wv / 2 + f * wv, y: -r * 0.55, r });
+    }
+    return { x, y: rand(playH * 0.08, playH * (near ? 0.5 : 0.4)), s: near ? rand(0.95, 1.35) : rand(0.55, 0.8), near, blobs, wv };
+  }
+  function drawCloud(c) {
+    ctx.save();
+    ctx.translate(c.x, c.y); ctx.scale(c.s, c.s);
+    ctx.beginPath(); ctx.rect(-200, -200, 400, 200); ctx.clip();
+    ctx.beginPath();
+    for (const b of c.blobs) { ctx.moveTo(b.x + b.r, b.y); ctx.arc(b.x, b.y, b.r, 0, TAU); }
+    ctx.lineWidth = 2.6 / c.s; ctx.strokeStyle = c.near ? P.cloudLine : P.cloudLine;
+    ctx.fillStyle = P.cloud;
+    ctx.stroke(); ctx.fill();
+    ctx.restore();
+    // flat underside
+    let lo = Infinity, hiX = -Infinity;
+    for (const b of c.blobs) {
+      const d = Math.sqrt(Math.max(0, b.r * b.r - b.y * b.y));
+      lo = Math.min(lo, b.x - d); hiX = Math.max(hiX, b.x + d);
+    }
+    ctx.beginPath();
+    ctx.moveTo(c.x + lo * c.s, c.y); ctx.lineTo(c.x + hiX * c.s, c.y);
+    ctx.lineWidth = 1.3; ctx.strokeStyle = P.cloudLine; ctx.stroke();
+  }
+  function makeFlock(x) {
+    const n = randi(3, 6), birds = [];
+    for (let i = 0; i < n; i++) {
+      const side = i % 2 ? 1 : -1, rank = Math.ceil(i / 2);
+      birds.push({ dx: rank * rand(8, 11), dy: side * rank * rand(4, 6), ph: rand(0, TAU), sz: rand(0.8, 1.1) });
+    }
+    return { x, y: rand(playH * 0.1, playH * 0.45), v: rand(12, 30), size: rand(3.5, 5.5), birds, flap: rand(0.8, 1.2) };
+  }
+  function drawFlock(f) {
+    ctx.strokeStyle = P.mid; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const b of f.birds) {
+      const s = f.size * b.sz;
+      const wy = Math.sin(t * 9 * f.flap + b.ph) * s * 0.6;
+      const bx = f.x + b.dx, by = f.y + b.dy + Math.sin(t * 1.4 + b.ph) * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(bx - s, by - wy - s * 0.15);
+      ctx.quadraticCurveTo(bx - s * 0.45, by - wy * 0.3 - s * 0.35, bx, by);
+      ctx.quadraticCurveTo(bx + s * 0.45, by - wy * 0.3 - s * 0.35, bx + s, by - wy - s * 0.15);
+      ctx.stroke();
+    }
+  }
+  const GROUND_TILE = 520;
+  const pebbles = Array.from({ length: 34 }, () => ({ x: rand(0, GROUND_TILE), y: rand(3, 14), w: rand(1, 4) }));
+  const bumps = Array.from({ length: 5 }, () => ({ x: rand(0, GROUND_TILE - 30), w: rand(10, 24) }));
+
+  function initScenery() {
+    clouds = [];
+    for (let i = 0, n = Math.ceil(W / 170); i < n; i++) clouds.push(makeCloud(rand(0, W), false));
+    for (let i = 0, n = Math.ceil(W / 260); i < n; i++) clouds.push(makeCloud(rand(0, W), true));
+    clouds.sort((a, b) => a.near - b.near);
+    flocks = [makeFlock(W * 0.62)];
+    stars = Array.from({ length: 40 }, () => ({ x: Math.random(), y: Math.random(), r: rand(1, 2), sp: rand(1, 3), ph: rand(0, TAU) }));
+  }
+
+  // ---------- audio ----------
+  let actx = null, muted = store.get('skyline-glide-muted') === '1';
+  function audio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  function tone(f1, f2, dur, type, vol, delay = 0) {
+    if (muted || !actx) return;
+    const o = actx.createOscillator(), g = actx.createGain(), n = actx.currentTime + delay;
+    o.type = type; o.frequency.setValueAtTime(f1, n);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, n + dur);
+    g.gain.setValueAtTime(vol, n); g.gain.exponentialRampToValueAtTime(0.0001, n + dur);
+    o.connect(g).connect(actx.destination); o.start(n); o.stop(n + dur + 0.02);
+  }
+  const sfx = {
+    flap: () => tone(360, 560, 0.07, 'square', 0.02),
+    point: () => { tone(880, 0, 0.07, 'square', 0.03); tone(1320, 0, 0.12, 'square', 0.03, 0.09); },
+    crash: () => tone(240, 50, 0.4, 'sawtooth', 0.05),
+  };
+  function renderMute() {
+    muteBtn.setAttribute('aria-pressed', String(muted));
+    muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+    $('waves').style.display = muted ? 'none' : '';
+    $('cross').style.display = muted ? '' : 'none';
+  }
+
+  // ---------- game flow ----------
+  function reset() {
+    clusters = []; enemies = []; puffs = []; trail = [];
+    elapsed = 0; dist = 0; score = 0; lastMilestone = 0; lastHf = 0.35;
+    speed = baseSpeed(); spawnCursor = W + 120; enemyTimer = 5;
+    player.y = playH * 0.42; player.vy = 0; player.angle = 0;
+    nightTarget = 0; nextToggle = 700;
+  }
+  function start() {
+    state = 'playing';
+    msg.hidden = true; hint.hidden = true;
+  }
+  function press() {
+    audio();
+    if (state === 'ready') { reset(); start(); }
+    else if (state === 'over') { if (overT < 0.5) return; reset(); start(); }
+    if (state === 'playing') { player.vy = Math.min(player.vy, -270 * k); sfx.flap(); }
+  }
+  function crash() {
+    state = 'over'; overT = 0;
+    sfx.crash();
+    for (let i = 0; i < 12; i++) {
+      const a = rand(0, TAU), v = rand(15, 60);
+      puffs.push({ x: px + rand(-6, 16), y: player.y + rand(-6, 6), vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, r: rand(3, 7), life: 1 });
+    }
+    if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
+    hiEl.textContent = 'HI ' + pad(hi);
+    msgTitle.textContent = 'GAME OVER';
+    msgSub.textContent = 'TAP TO FLY AGAIN';
+    retry.hidden = false;
+    msg.hidden = false;
+  }
+
+  function trySpawnEnemy(diff) {
+    const sc = rand(0.78, 0.95);
+    const ex = W + 40;
+    // The enemy moves left faster than the towers, so it only ever crosses towers already spawned left of it.
+    let minTop = groundY;
+    for (const c of clusters) {
+      if (c.x < ex + 60 && c.x + c.width > -10) {
+        const hB = c.hf * playH;
+        minTop = Math.min(minTop, groundY - hB - ornUnit(hB) * 1.6);
+      }
+    }
+    const yMin = 22 + 17 * sc;
+    const yMax = minTop - (70 + 10 * k) - 11 * sc;
+    if (yMax < yMin) { enemyTimer = 0.6; return; }
+    const y = Math.random() < 0.55 ? clamp(player.y + rand(-25, 25), yMin, yMax) : rand(yMin, yMax);
+    for (const e of enemies) if (e.x > W * 0.45 && Math.abs(e.y - y) < 36) { enemyTimer = 0.5; return; }
+    enemies.push({ x: ex, y, v: rand(60, 110 + 60 * diff), sc, liv: pick(LIVERIES) });
+    enemyTimer = rand(2.6, 4.6) - diff * 1.3;
+  }
+
+  function update(dt) {
+    t += dt;
+    nightMix += clamp(nightTarget - nightMix, -dt * 0.5, dt * 0.5);
+    updatePalette(nightMix);
+    const worldSpeed = state === 'playing' ? speed : state === 'ready' ? 60 : 0;
+
+    for (const c of clouds) {
+      c.x -= (worldSpeed * (c.near ? 0.22 : 0.1) + (c.near ? 6 : 3)) * dt;
+      if (c.x < -130) Object.assign(c, makeCloud(W + rand(40, 220), c.near));
+    }
+    flockTimer -= dt;
+    if (flockTimer <= 0) { flocks.push(makeFlock(W + 40)); flockTimer = rand(4, 9); }
+    for (const f of flocks) f.x -= (worldSpeed * 0.3 + f.v) * dt;
+    flocks = flocks.filter((f) => f.x > -90);
+    groundOff += worldSpeed * dt;
+
+    for (const p of puffs) { p.x += p.vx * dt; p.y += p.vy * dt; p.r += 14 * dt; p.life -= dt * 1.1; }
+    puffs = puffs.filter((p) => p.life > 0);
+    for (const s of trail) { s.x -= worldSpeed * dt; s.a -= dt * 1.6; }
+    trail = trail.filter((s) => s.a > 0);
+
+    if (state === 'ready') {
+      player.y = playH * (portrait ? 0.55 : 0.42) + Math.sin(t * 2.4) * 5;
+      player.angle = Math.cos(t * 2.4) * -0.05;
+      return;
+    }
+    if (state === 'over') { overT += dt; return; }
+
+    // playing
+    elapsed += dt;
+    const diff = clamp(elapsed / 100, 0, 1);
+    speed = Math.min(baseSpeed() + elapsed * 3.2, portrait ? 300 : 380);
+    dist += speed * dt;
+    score = Math.floor(dist * 0.055);
+
+    const g = 980 * k;
+    if (holding()) player.vy = Math.max(player.vy + (g - 2100 * k) * dt, -320 * k);
+    else player.vy = Math.min(player.vy + g * dt, 460 * k);
+    player.y += player.vy * dt;
+    if (player.y < 18) { player.y = 18; player.vy = Math.max(player.vy, 0); }
+    const target = clamp(player.vy / (460 * k) * 0.5, -0.38, 0.5);
+    player.angle += (target - player.angle) * Math.min(1, dt * 10);
+
+    for (const c of clusters) c.x -= speed * dt;
+    clusters = clusters.filter((c) => c.x + c.width > -20);
+    spawnCursor -= speed * dt;
+    while (spawnCursor < W + 60) {
+      const c = makeCluster(spawnCursor, diff);
+      clusters.push(c);
+      spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1);
+    }
+
+    for (const e of enemies) e.x -= (speed + e.v) * dt;
+    enemies = enemies.filter((e) => e.x > -80);
+    enemyTimer -= dt;
+    if (enemyTimer <= 0 && elapsed > 4) trySpawnEnemy(diff);
+
+    trailTimer -= dt;
+    if (trailTimer <= 0) {
+      trailTimer = 0.04;
+      const c = Math.cos(player.angle), s = Math.sin(player.angle);
+      trail.push({ x: px + (-1) * c - 8 * s, y: player.y + (-1) * s + 8 * c, a: 0.6 });
+    }
+
+    // milestones and day/night
+    if (score >= lastMilestone + 100) { lastMilestone = Math.floor(score / 100) * 100; blinkScore(); sfx.point(); }
+    if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += 700; }
+
+    // collisions
+    const poly = planePoly(px, player.y, player.angle, 1, 0.95);
+    for (const p of poly) if (p[1] >= groundY) return crash();
+    for (const c of clusters) {
+      if (c.x > px + 40 || c.x + c.width < px - 40) continue;
+      const y0 = groundY - c.hf * playH;
+      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) if (polyHitsRect(poly, r)) return crash();
+    }
+    for (const e of enemies) {
+      if (Math.abs(e.x - px) > 70 || Math.abs(e.y - player.y) > 40) continue;
+      if (polyHitsPoly(poly, planePoly(e.x, e.y, 0, -1, e.sc))) return crash();
+    }
+  }
+
+  function blinkScore() {
+    scoreEl.classList.remove('blink');
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add('blink');
+  }
+
+  function draw() {
+    ctx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0);
+    ctx.fillStyle = P.sky; ctx.fillRect(0, 0, W, H);
+
+    if (nightMix > 0.01) {
+      ctx.fillStyle = P.ink;
+      for (const s of stars) {
+        ctx.globalAlpha = nightMix * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph)));
+        ctx.fillRect(s.x * W, s.y * playH * 0.7, s.r, s.r);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // sun / moon
+    const sx = W * 0.8, sy = Math.max(42, playH * 0.17), sr = 17;
+    if (nightMix < 0.99) {
+      ctx.globalAlpha = 1 - nightMix;
+      ctx.strokeStyle = SUN_LINE; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * TAU + t * 0.15;
+        ctx.moveTo(sx + Math.cos(a) * (sr + 5), sy + Math.sin(a) * (sr + 5));
+        ctx.lineTo(sx + Math.cos(a) * (sr + 10), sy + Math.sin(a) * (sr + 10));
+      }
+      ctx.stroke();
+      ctx.fillStyle = SUN; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+      ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (nightMix > 0.01) {
+      ctx.globalAlpha = nightMix;
+      ctx.fillStyle = MOON; ctx.beginPath(); ctx.arc(sx, sy, sr - 2, 0, TAU); ctx.fill();
+      ctx.fillStyle = P.sky; ctx.beginPath(); ctx.arc(sx + 7, sy - 4, sr - 4, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    for (const c of clouds) if (!c.near) drawCloud(c);
+    for (const f of flocks) drawFlock(f);
+    for (const c of clouds) if (c.near) drawCloud(c);
+
+    for (const c of clusters) {
+      if (c.x > W + 10 || c.x + c.width < -10) continue;
+      const y0 = groundY - c.hf * playH;
+      for (const tw of c.towers) drawTower(tw, c.x + tw.dx, y0);
+    }
+
+    for (const e of enemies) drawPlane(e.x, e.y, 0, -1, e.sc, e.liv);
+
+    ctx.fillStyle = P.mid;
+    for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
+    ctx.globalAlpha = 1;
+    drawPlane(px, player.y, player.angle, 1, 0.95, PLAYER_LIVERY);
+
+    for (const p of puffs) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = P.body; ctx.strokeStyle = P.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill(); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // ground
+    ctx.fillStyle = P.sky; ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.4; ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+    ctx.fillStyle = P.ink;
+    for (let off = -(groundOff % GROUND_TILE); off < W; off += GROUND_TILE) {
+      for (const p of pebbles) ctx.fillRect(off + p.x, groundY + p.y, p.w, 1.3);
+      ctx.beginPath();
+      for (const b of bumps) { ctx.moveTo(off + b.x, groundY); ctx.lineTo(off + b.x + 3, groundY - 2); ctx.lineTo(off + b.x + b.w - 3, groundY - 2); ctx.lineTo(off + b.x + b.w, groundY); }
+      ctx.stroke();
+    }
+
+    if (score !== shownScore) { shownScore = score; scoreEl.textContent = pad(score); }
+  }
+
+  // ---------- input ----------
+  const isUi = (e) => e.target && e.target.closest && e.target.closest('#mute');
+  window.addEventListener('pointerdown', (e) => {
+    if (isUi(e)) return;
+    e.preventDefault();
+    pointers.add(e.pointerId);
+    press();
+  }, { passive: false });
+  const release = (e) => pointers.delete(e.pointerId);
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  window.addEventListener('touchstart', (e) => { if (!isUi(e)) e.preventDefault(); }, { passive: false });
+  window.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+      e.preventDefault();
+      if (!e.repeat) { keyHeld = true; press(); }
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keyHeld = false;
+  });
+  window.addEventListener('blur', () => { pointers.clear(); keyHeld = false; });
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    store.set('skyline-glide-muted', muted ? '1' : '0');
+    renderMute();
+    if (!muted) audio();
+  });
+
+  // ---------- loop ----------
+  let last = performance.now();
+  document.addEventListener('visibilitychange', () => { last = performance.now(); pointers.clear(); keyHeld = false; });
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  updatePalette(0);
+  resize();
+  initScenery();
+  reset();
+  renderMute();
+  hiEl.textContent = 'HI ' + pad(hi);
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
