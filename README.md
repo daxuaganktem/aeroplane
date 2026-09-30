@@ -2,11 +2,11 @@
 
 A one-button, mobile-first browser game: fly a little airliner over city tower clusters and dodge oncoming traffic.
 
-- **Hangar:** planes you unlock with your best score: Airliner (from the start), Turboprop (150), Business jet (400), Jumbo jet (800) and Fighter jet (1500), each in six liveries. Locked planes show as silhouettes. The crash screen has **Fly again** and **Home**.
+- **Hangar:** ten planes you unlock with your best score: Airliner (from the start), Light plane (100), Turboprop (200), Biplane (300), Business jet (450), Seaplane (600), Regional jet (800), Jumbo jet (1000), Supersonic (1300) and Fighter jet (1600), each in six liveries. Locked planes show as silhouettes. The crash screen has **Fly again** and **Home**.
 - **Tap** anywhere to climb, **hold** to keep climbing (Space / ↑ on desktop).
 - **Fuel:** taps sip fuel, holding burns it fast, and it refills while you're off the throttle. Run dry and the engine cuts out until the tank is back to a quarter.
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops, water tanks, billboards, lobbies and blinking aviation beacons. Windows catch a sweeping glint by day and flicker on and off at night.
-- Oncoming traffic gets more aggressive with your score: biplanes (0), propliners (200), jets that steer toward you (450), then fighter jets that chase your altitude (800). A red chevron on the right edge warns you before fast ones arrive.
+- Ten kinds of oncoming traffic join as your score climbs, each faster or more aggressive: biplanes and blimps (0), light planes (100), helicopters (200), vintage propliners (300), WWII fighters (450), regional jets (600), widebody airliners (800), supersonic jets (1000) and fighter jets that chase your altitude (1200). A red chevron on the right edge warns you before fast ones arrive.
 - Day and night swap every 500 points.
 
 `src/game.html` is the source. Run `./build.sh` to regenerate the standalone `index.html`, which you can open directly or serve from any static host.

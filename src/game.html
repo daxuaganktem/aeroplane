@@ -542,269 +542,15 @@
     ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill();
   }
 
-  function drawJet(liv, seed) {
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-17, -4.5); ctx.lineTo(-24, -16.5); ctx.lineTo(-28.5, -16.5); ctx.lineTo(-27.5, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    ctx.moveTo(-28, -5); ctx.lineTo(18, -5);
-    ctx.bezierCurveTo(25, -5, 29, -1.5, 29, 1.5);
-    ctx.bezierCurveTo(29, 4, 25, 5, 18, 5);
-    ctx.lineTo(-14, 5); ctx.lineTo(-28, -1.5); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-20, 0.8); ctx.lineTo(26, 0.8); ctx.lineTo(27.5, 2.2); ctx.lineTo(-17, 2.2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.ink;
-    for (let wx = -13; wx <= 15; wx += 3.1) ctx.fillRect(wx, -2.6, 1.5, 1.7);
-    ctx.beginPath(); ctx.moveTo(21.5, -3.4); ctx.lineTo(25.5, -2.6); ctx.lineTo(27.2, -0.8); ctx.lineTo(22, -1); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.body;
-    ctx.beginPath(); ctx.moveTo(-19, -1.5); ctx.lineTo(-29.5, -5); ctx.lineTo(-30.5, -2.8); ctx.lineTo(-22, 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.moveTo(6, 2.5); ctx.lineTo(-6, 11); ctx.lineTo(-10.5, 11); ctx.lineTo(-3, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(0.5, 6, 10.5, 4.4, 2); else ctx.rect(0.5, 6, 10.5, 4.4);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.ink; ctx.fillRect(9.8, 6.9, 1.2, 2.6);
-    navLights(-26.5, -16.5, -9.5, 11, seed);
-  }
-
-  function drawBiplane(liv, seed) {
-    // landing gear
-    ctx.beginPath(); ctx.moveTo(4, 4); ctx.lineTo(2.5, 10); ctx.moveTo(8, 4); ctx.lineTo(3.5, 10); ctx.stroke();
-    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(3, 10.5, 2.2, 0, TAU); ctx.fill();
-    // lower wing
-    ctx.fillStyle = P.wing; ctx.beginPath(); ctx.rect(-6, 2.6, 16, 2.4); ctx.fill(); ctx.stroke();
-    // tail fin
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-14, -2.5); ctx.quadraticCurveTo(-18, -10.5, -21.5, -10.5); ctx.lineTo(-22, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // fuselage
-    ctx.beginPath();
-    ctx.moveTo(-22, -1.5); ctx.lineTo(8, -4.5);
-    ctx.quadraticCurveTo(13, -4.5, 14, -2); ctx.lineTo(14, 2.5);
-    ctx.quadraticCurveTo(13, 4.5, 8, 4.5); ctx.lineTo(-22, 1); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // open cockpit and pilot
-    ctx.fillStyle = P.ink;
-    ctx.beginPath(); ctx.arc(-3, -4.8, 1.8, Math.PI, TAU); ctx.fill();
-    // stabiliser
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.moveTo(-16, -0.5); ctx.lineTo(-24, -2); ctx.lineTo(-24, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // struts and upper wing
-    ctx.beginPath(); ctx.moveTo(-3.5, -9.6); ctx.lineTo(-3.5, 2.6); ctx.moveTo(7.5, -9.6); ctx.lineTo(7.5, 2.6);
-    ctx.moveTo(2, -9.6); ctx.lineTo(4, -4.3); ctx.stroke();
-    ctx.fillStyle = P.wing; ctx.beginPath(); ctx.rect(-7, -12, 18, 2.4); ctx.fill(); ctx.stroke();
-    // cowling and propeller
-    ctx.fillStyle = P.body; ctx.beginPath(); ctx.rect(13.5, -3.5, 2.5, 7); ctx.fill(); ctx.stroke();
-    propDisc(17, 0, 9, 38);
-    navLights(-21.5, -10.5, 10.5, -11, seed);
-  }
-
-  function drawProp(liv, seed) {
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-16, -4.5); ctx.bezierCurveTo(-19, -10, -22, -15.5, -25.5, -15.5); ctx.lineTo(-27.5, -14.5); ctx.lineTo(-27, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    ctx.moveTo(-28, -4); ctx.lineTo(12, -5);
-    ctx.bezierCurveTo(21, -5, 25, -2, 25, 0.5);
-    ctx.bezierCurveTo(25, 3, 21, 5, 12, 5);
-    ctx.lineTo(-14, 5); ctx.lineTo(-28, -1); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = liv; ctx.fillRect(-17, 0.4, 40, 1.6);
-    ctx.fillStyle = P.ink;
-    for (let wx = -12; wx <= 11; wx += 4.4) ctx.fillRect(wx, -3, 2.2, 2.2);
-    ctx.beginPath(); ctx.moveTo(18, -3.4); ctx.lineTo(22, -2.4); ctx.lineTo(23.2, -0.8); ctx.lineTo(18.5, -1); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.body;
-    ctx.beginPath(); ctx.moveTo(-18, -1.5); ctx.lineTo(-28.5, -4.5); ctx.lineTo(-29.5, -2.3); ctx.lineTo(-21, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.moveTo(4, 2.5); ctx.lineTo(-4, 9.5); ctx.lineTo(-10, 9.5); ctx.lineTo(-6, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-2, 3.5, 11.5, 4.6, 2.2); else ctx.rect(-2, 3.5, 11.5, 4.6);
-    ctx.fill(); ctx.stroke();
-    propDisc(10.5, 5.8, 7, 32);
-    // tail wheel
-    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(-23, 1.8, 1.2, 0, TAU); ctx.fill();
-    navLights(-25.5, -15.5, -8, 9.5, seed);
-  }
-
-  function drawFighter(liv, seed) {
-    // afterburner
-    const fl = 7 + Math.sin(t * 40 + seed) * 2.5;
-    ctx.fillStyle = FLAME; ctx.beginPath(); ctx.moveTo(-20, -2.3); ctx.lineTo(-20 - fl, 0); ctx.lineTo(-20, 2.3); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = FLAME_CORE; ctx.beginPath(); ctx.moveTo(-20, -1.2); ctx.lineTo(-20 - fl * 0.55, 0); ctx.lineTo(-20, 1.2); ctx.closePath(); ctx.fill();
-    // tail fin
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-9, -3.5); ctx.lineTo(-17.5, -13); ctx.lineTo(-21, -13); ctx.lineTo(-20, -3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // fuselage
-    ctx.fillStyle = P.steel;
-    ctx.beginPath();
-    ctx.moveTo(25, 0.5); ctx.lineTo(12, -3); ctx.lineTo(-14, -3.8); ctx.lineTo(-20, -3); ctx.lineTo(-20, 3); ctx.lineTo(6, 3.2); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // canopy
-    ctx.fillStyle = P.ink;
-    ctx.beginPath(); ctx.moveTo(14, -2.8); ctx.quadraticCurveTo(8, -7.5, 1, -3.4); ctx.closePath(); ctx.fill();
-    // intake
-    ctx.fillRect(-1, -1.2, 6, 2.8);
-    // delta wing
-    ctx.fillStyle = P.steel;
-    ctx.beginPath(); ctx.moveTo(4, 1.5); ctx.lineTo(-13, 7.5); ctx.lineTo(-18.5, 7.5); ctx.lineTo(-17, 1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // tailplane
-    ctx.beginPath(); ctx.moveTo(-15, 0.5); ctx.lineTo(-23, 3.5); ctx.lineTo(-20, 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // livery flash on the wing root
-    ctx.fillStyle = liv; ctx.fillRect(-10, 2.4, 6, 1.4);
-    navLights(-19.5, -13, -16, 7.5, seed);
-  }
-
-  function drawJumbo(liv, seed) {
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-20, -5.5); ctx.lineTo(-27, -19); ctx.lineTo(-32, -19); ctx.lineTo(-31.5, -5.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    ctx.moveTo(-32, -5.5); ctx.lineTo(4, -5.5);
-    ctx.bezierCurveTo(10, -5.5, 12, -9.5, 20, -9.5);
-    ctx.bezierCurveTo(28, -9.5, 33, -3, 33, 1);
-    ctx.bezierCurveTo(33, 4.5, 29, 5.5, 22, 5.5);
-    ctx.lineTo(-16, 5.5); ctx.lineTo(-32, -1.5); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-23, 1); ctx.lineTo(30.5, 1); ctx.lineTo(32, 2.6); ctx.lineTo(-20, 2.6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.ink;
-    for (let wx = -17; wx <= 22; wx += 3) ctx.fillRect(wx, -3, 1.4, 1.7);
-    for (let wx = 11; wx <= 22; wx += 3) ctx.fillRect(wx, -7.6, 1.4, 1.5);
-    ctx.beginPath(); ctx.moveTo(25, -8); ctx.lineTo(28.5, -7); ctx.lineTo(30, -5.2); ctx.lineTo(25.5, -5.6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.body;
-    ctx.beginPath(); ctx.moveTo(-23, -2); ctx.lineTo(-34, -6); ctx.lineTo(-35, -3.5); ctx.lineTo(-26, 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.moveTo(9, 2.5); ctx.lineTo(-7, 12.5); ctx.lineTo(-12.5, 12.5); ctx.lineTo(-1, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    for (const [ex, ey, ew] of [[-6, 10.5, 9], [3, 7, 10.5]]) {
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(ex, ey, ew, 4.2, 2); else ctx.rect(ex, ey, ew, 4.2);
-      ctx.fill(); ctx.stroke();
-    }
-    ctx.fillStyle = P.ink; ctx.fillRect(2.2, 11.3, 1.1, 2.4); ctx.fillRect(12.3, 7.8, 1.1, 2.6);
-    navLights(-30, -19, -12.5, 12.5, seed);
-  }
-
-  function drawBizjet(liv, seed) {
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-12, -3.8); ctx.lineTo(-17, -14); ctx.lineTo(-21, -14); ctx.lineTo(-21, -3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-15.5, -14); ctx.lineTo(-25, -15.8); ctx.lineTo(-25.5, -13.4); ctx.lineTo(-17, -12.6); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    ctx.moveTo(-22, -3.5); ctx.lineTo(12, -4);
-    ctx.bezierCurveTo(18, -4, 22, -1.5, 22.5, 1);
-    ctx.bezierCurveTo(22, 3, 18, 4, 12, 4);
-    ctx.lineTo(-10, 4); ctx.lineTo(-22, -0.5); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-18, 0.6); ctx.lineTo(21, 0.6); ctx.lineTo(22, 1.8); ctx.lineTo(-16, 1.8); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.ink;
-    for (let wx = -4; wx <= 10; wx += 3.4) { ctx.beginPath(); ctx.ellipse(wx, -1.6, 0.9, 1.1, 0, 0, TAU); ctx.fill(); }
-    ctx.beginPath(); ctx.moveTo(15.5, -3.2); ctx.lineTo(19, -2.4); ctx.lineTo(20.5, -0.8); ctx.lineTo(16, -1); ctx.closePath(); ctx.fill();
-    // rear-mounted engine
-    ctx.beginPath(); ctx.moveTo(-9, -3.8); ctx.lineTo(-9, -4.4); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-15, -7.8, 10, 3.8, 1.9); else ctx.rect(-15, -7.8, 10, 3.8);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.ink; ctx.fillRect(-6, -7.1, 0.9, 2.4);
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.moveTo(3, 2); ctx.lineTo(-6, 8); ctx.lineTo(-9.5, 8); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-8, 8); ctx.lineTo(-9.5, 5); ctx.stroke();
-    navLights(-24, -15, -7.5, 8, seed);
-  }
-
-  function drawTurboprop(liv, seed) {
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-14, -4.5); ctx.lineTo(-20, -16); ctx.lineTo(-24, -16); ctx.lineTo(-24, -4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-18, -16); ctx.lineTo(-28, -17.6); ctx.lineTo(-28.5, -15.2); ctx.lineTo(-19.5, -14.4); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-5, 3, 10, 3, 1.5); else ctx.rect(-5, 3, 10, 3);
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-25, -4.5); ctx.lineTo(14, -4.5);
-    ctx.bezierCurveTo(21, -4.5, 25.5, -1.5, 26, 1);
-    ctx.bezierCurveTo(25.5, 3.5, 21, 4.5, 14, 4.5);
-    ctx.lineTo(-12, 4.5); ctx.lineTo(-25, -1); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = liv;
-    ctx.beginPath(); ctx.moveTo(-20, 0.6); ctx.lineTo(24.5, 0.6); ctx.lineTo(25.5, 2); ctx.lineTo(-17, 2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = P.ink;
-    for (let wx = -15; wx <= 12; wx += 3.6) ctx.fillRect(wx, -2.8, 1.8, 1.9);
-    ctx.beginPath(); ctx.moveTo(18, -3.4); ctx.lineTo(22, -2.4); ctx.lineTo(23.6, -0.6); ctx.lineTo(18.5, -0.8); ctx.closePath(); ctx.fill();
-    // high wing with the engine slung under it
-    ctx.fillStyle = P.wing;
-    ctx.beginPath(); ctx.rect(-8, -6.8, 17, 2.3); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = P.body;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(1, -9, 12.5, 5, 2.2); else ctx.rect(1, -9, 12.5, 5);
-    ctx.fill(); ctx.stroke();
-    propDisc(14.5, -6.5, 8, 34);
-    navLights(-26, -17, -8, -6, seed);
-  }
-
-  // top/bottom: how far each model reaches above/below its centre line (local units)
-  const MODELS = {
-    jet: { draw: drawJet, top: 17, bottom: 11,
-      hit: [[27, 1.5], [21, -4.5], [-18, -4.5], [-23, -15], [-27, -15], [-27, -5], [-26, -1], [-14, 4.5],
-            [-10, 10], [-6, 10], [2, 9.5], [10, 9.5], [18, 4.8]] },
-    biplane: { draw: drawBiplane, top: 12, bottom: 13,
-      hit: [[17, -8], [17, 8], [9, 5], [5, 12.5], [1, 12.5], [-6, 5], [-21, 1.5], [-23, 1], [-21.5, -9.5], [-18, -9.5],
-            [-14, -3], [-7, -12], [11, -12], [15, -4]] },
-    prop: { draw: drawProp, top: 16, bottom: 13,
-      hit: [[25, 0.5], [20, -4.5], [-16, -4.5], [-24, -15], [-27.5, -14.5], [-27.5, -4], [-26, -1], [-14, 5],
-            [-10, 9.5], [-4, 9.5], [0, 8], [10.5, 12.5], [11.5, 4.5], [20, 4.5]] },
-    fighter: { draw: drawFighter, top: 13, bottom: 8,
-      hit: [[25, 0.5], [12, -3.5], [7, -6], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
-            [-18, 7], [-13, 7], [4, 3]] },
-    jumbo: { draw: drawJumbo, top: 19, bottom: 15,
-      hit: [[33, 1], [27, -8], [20, -9.5], [8, -6], [-20, -5.5], [-27, -18.5], [-32, -18.5], [-31.5, -5.5], [-34.5, -4],
-            [-30, -1], [-16, 5.5], [-12.5, 12.5], [-6, 14.5], [3, 14.5], [13.5, 11.4], [22, 5.5]] },
-    bizjet: { draw: drawBizjet, top: 16, bottom: 8,
-      hit: [[22.5, 1], [16, -3.8], [-5, -4], [-5, -7.6], [-15, -7.6], [-17, -14], [-25, -15.8], [-25.5, -13.4], [-21, -3.5],
-            [-22, -0.5], [-10, 4], [-9.5, 8], [-6, 8], [3, 4]] },
-    turboprop: { draw: drawTurboprop, top: 18, bottom: 6,
-      hit: [[26, 1], [20, -4.5], [15, -4.5], [15, -14.5], [14, -14.5], [1, -9], [-8, -6.8], [-14, -4.5], [-20, -16],
-            [-28, -17.6], [-28.5, -15.2], [-25, -4.5], [-25, -1], [-12, 4.5], [-5, 6], [5, 6], [20, 4.5]] },
-  };
-
-  // Player hangar: pixel-art planes that unlock with your best score, in six liveries.
-  const PLANES = [
-    { id: 'airliner', label: 'AIRLINER', name: 'AIRLINER', unlock: 0 },
-    { id: 'turboprop', label: 'PROP', name: 'TURBOPROP', unlock: 150 },
-    { id: 'bizjet', label: 'BIZJET', name: 'BUSINESS JET', unlock: 400 },
-    { id: 'jumbo', label: 'JUMBO', name: 'JUMBO JET', unlock: 800 },
-    { id: 'fighter', label: 'FIGHTER', name: 'FIGHTER JET', unlock: 1500 },
-  ];
-  const COLORS = [
-    { id: 'blue', name: 'Navy', c: '#2b3f93' },
-    { id: 'red', name: 'Signal red', c: '#c8402f' },
-    { id: 'green', name: 'Pine green', c: '#2f7d4f' },
-    { id: 'orange', name: 'Sunset orange', c: '#e0822a' },
-    { id: 'purple', name: 'Royal purple', c: '#6c4bb0' },
-    { id: 'charcoal', name: 'Charcoal', c: '#3a3f47' },
-  ];
-  const colorById = (id) => COLORS.find((c) => c.id === id) || null;
-  let boardBest = () => 0; // points at the board's saved best once the board exists
-  const bestEver = () => Math.max(hi, boardBest());
-  const isUnlocked = (p) => bestEver() >= p.unlock;
-  const choice = {
-    plane: PLANES.find((p) => p.id === store.get('skyline-glide-plane')) || PLANES[0],
-    color: colorById(store.get('skyline-glide-color')) || COLORS[0],
-  };
-  if (!isUnlocked(choice.plane)) choice.plane = PLANES[0];
-
-  // Player planes, drawn in the reference style: flat colour, a soft outline, a tall livery tail
-  // with a darker trailing edge, grey lower fuselage, belly stripe, outlined doors and a livery engine.
-  // Coordinates are local units with the nose pointing +x; hit lists the crash outline.
+  // ---------- aircraft catalogue ----------
+  // Every aircraft is drawn in the reference style: flat colour, a soft outline, a livery tail with a
+  // darker trailing edge, grey lower body, belly stripe, outlined doors and livery engines.
+  // Local units, nose pointing +x. top/bottom: reach above/below the centre line. hit: crash outline.
   const PC = { white: '#ffffff', shade: '#dde3ea', wing: '#eef2f6', wingShade: '#c3cad3', win: '#4a5160',
                cockpit: '#27324f', out: '#8e98a5', tyre: '#2a2a2a', steel: '#b3bbc4', steelShade: '#939ca6' };
   const darken = (hex, f) => { const [r, g, b] = hexRgb(hex); return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`; };
   const P2 = (d) => new Path2D(d);
-  const PLAYER_SHAPES = {
+  const CRAFT = {
     airliner: { sc: 0.92,
       farWing: P2('M-3 -4.8 L-9 -8.6 L-5 -8.9 L4 -4.8 Z'), antenna: [5, -5, 6.2, -7.8],
       fin: P2('M-13 -5 C-18 -5.6 -22 -9.5 -24.5 -21 L-28.8 -21.5 L-28.6 -5 Z'),
@@ -877,94 +623,275 @@
       top: 13.5, bottom: 8,
       hit: [[25, 0.5], [12, -3.5], [7, -6.5], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
             [-18, 7], [-13, 7], [4, 3]] },
+    cessna: { sc: 1.1,
+      fin: P2('M-10 -3 L-14.5 -11 L-17.5 -11 L-17 -3 Z'), finEdge: P2('M-17.5 -11 L-16.3 -11 L-15.8 -3 L-17 -3 Z'),
+      body: P2('M-17 -3 L2 -4.5 L9 -4.5 C13 -4.5 15 -2.5 15.5 0 C15 2.5 13 3.5 9 3.5 L-6 3.5 C-11 3.5 -14 1.5 -17.5 -1 Z'),
+      shadeY: 1, bellyY: 2.4,
+      glass: [P2('M1.5 -3.9 L8.4 -3.9 L10.6 -0.9 L1.5 -0.9 Z')],
+      tailplane: P2('M-12 -1 L-19.5 -3 L-19.8 -1 L-14 0.8 Z'),
+      highWing: P2('M-3.5 -6.4 L9 -6.4 L9 -4.5 L-3.5 -4.5 Z'),
+      struts: [[5, -4.6, 1.5, 2.5]],
+      spinner: P2('M15 -1.6 L17.6 0 L15 1.6 Z'), noseProp: [16.4, 0, 6.5],
+      gear: [[-2, 3.4], [11, 3.4]],
+      top: 11, bottom: 6.5,
+      hit: [[16.5, -6.5], [9, -6.4], [-3.5, -6.4], [-10, -3], [-14.5, -11], [-17.5, -11], [-19.8, -2.8], [-17.5, -1],
+            [-14, 0.8], [-6, 3.5], [9, 3.5], [16.5, 6.5]] },
+    biplane: { sc: 1.05,
+      fin: P2('M-12 -2.5 Q-16 -10 -19.5 -10 L-20 -1 Z'), finEdge: P2('M-19.5 -10 L-18.4 -9.9 L-18.8 -1.2 L-20 -1 Z'),
+      body: P2('M-20 -1.8 L7 -4.2 Q12 -4.2 13 -1.5 L13 2.2 Q12 4.2 7 4.2 L-20 1 Z'),
+      shadeY: 1.2, bellyY: 3,
+      cockpit: P2('M-5.6 -3.9 Q-3.3 -7.2 -1 -4.2 Z'),
+      tailplane: P2('M-15 -0.5 L-22.5 -2 L-22.5 1 Z'),
+      wing: P2('M-5 2.6 L10 2.6 L10 4.8 L-5 4.8 Z'), wingFill: 'liv',
+      cowl: P2('M12.4 -3.6 L15 -3.6 L15 3.6 L12.4 3.6 Z'), noseProp: [16, 0, 9],
+      upperWing: P2('M-6 -12 L12 -12 L12 -9.6 L-6 -9.6 Z'),
+      struts: [[-3, -9.6, -3, 2.6], [9, -9.6, 9, 2.6], [3, -9.6, 5, -4]],
+      fixedGear: [[4.5, 4.2, 6]],
+      top: 12, bottom: 13,
+      hit: [[16.5, -9], [16.5, 9], [9, 5], [6.5, 12.7], [2.5, 12.7], [-5, 4.8], [-20, 1], [-22.5, 1], [-22.5, -2],
+            [-19.5, -10], [-16, -10], [-12, -3], [-6, -12], [12, -12], [15, -3.6]] },
+    regional: { sc: 0.95,
+      fin: P2('M-14 -4 L-19 -15 L-23 -15 L-23 -4 Z'), finEdge: P2('M-23 -15 L-21.5 -15 L-21.4 -4 L-23 -4 Z'),
+      tailplane: P2('M-17.5 -15.2 L-27 -17 L-27.5 -14.5 L-19 -13.6 Z'),
+      body: P2('M-24 -4 L15 -4.3 C20.5 -4.3 24 -2 24.5 0.8 C24 3 20.5 4.2 15 4.2 L-10 4.2 C-16 4.2 -20.5 1.8 -24.5 -0.8 Z'),
+      shadeY: 1.3, bellyY: 2.9,
+      windows: [{ x0: -9, x1: 15, step: 2.6, y: -2.2, w: 1.3, h: 1.5 }],
+      doors: [[16.3, -3.3, 2.2, 4.6], [-12.6, -3.1, 2.1, 4.2]],
+      cockpit: P2('M18.3 -3.2 L21.8 -2.3 L23.3 -0.6 L18.7 -0.8 Z'),
+      rearEngines: [[-17, -8.4, 10.5, 4]],
+      wing: P2('M4 2.5 L-6 9 L-10 9 L-4 2.5 Z'), wingTop: P2('M4 2.5 L-5.5 8.2 L-8.2 8.2 L-2.5 2.5 Z'),
+      gear: [[-2, 4.2], [0.5, 4.2], [19, 4]],
+      top: 17, bottom: 9,
+      hit: [[24.5, 0.8], [18, -4.2], [-6.5, -4.3], [-6.5, -8.4], [-17, -8.4], [-19, -15], [-27, -17], [-27.5, -14.5],
+            [-23, -4], [-24.5, -0.8], [-10, 4.2], [-10, 9], [-6, 9], [4, 4]] },
+    concorde: { sc: 0.85,
+      fin: P2('M-16 -3 L-27 -15 L-30 -15 L-29.5 -3 Z'), finEdge: P2('M-30 -15 L-28.8 -15 L-28.2 -3 L-29.5 -3 Z'),
+      body: P2('M-30 -3 L18 -3 C24 -3 28 -1.5 31 0.8 L30.5 1.8 C27 2.8 24 3 18 3 L-26 3 C-28 2.5 -29.5 1 -30.5 -0.5 Z'),
+      shadeY: 0.8, bellyY: 2.1,
+      windows: [{ x0: -18, x1: 15, step: 2.2, y: -1.6, w: 1, h: 1.1 }],
+      doors: [[16.8, -2.4, 1.8, 4]],
+      cockpit: P2('M21 -2.4 L25 -1.6 L26 -0.4 L21.4 -0.6 Z'),
+      wing: P2('M12 2 L-22 6.5 L-28 6.5 L-26 2 Z'), wingTop: P2('M12 2 L-21 5.6 L-25 5.6 L-23.5 2 Z'),
+      engines: [[-22, 5, 14, 3.6]],
+      gear: [[-12, 6], [-9, 6], [20, 3]],
+      top: 15, bottom: 9,
+      hit: [[31, 0.8], [18, -3], [-16, -3], [-27, -15], [-30, -15], [-30.5, -0.5], [-28, 6.5], [-22, 8.6], [-8, 8.6],
+            [12, 2.5], [30.5, 1.8]] },
+    blimp: { sc: 1,
+      fin: P2('M-20 -7.5 L-29 -15 L-33 -15 L-30 -3 Z'), lowerFin: P2('M-20 7.5 L-29 15 L-33 15 L-30 3 Z'),
+      under: P2('M-6 9.5 L8 9.5 L7 14 L-4 14 Z'),
+      body: P2('M-30 0 C-30 -8.5 -15 -11 0 -11 C18 -11 30 -7 30 0 C30 7 18 11 0 11 C-15 11 -30 8.5 -30 0 Z'),
+      shadeY: 3.5, bellyY: null, band: [-2.2, 1],
+      windows: [{ x0: -3.5, x1: 6, step: 2.4, y: 10.8, w: 1.3, h: 1.4 }],
+      top: 15, bottom: 15,
+      hit: [[30, 0], [22, -8.5], [0, -11], [-20, -7.5], [-29, -15], [-33, -15], [-30, 0], [-33, 15], [-29, 15], [-20, 7.5],
+            [-6, 10], [-4, 14], [7, 14], [8, 10.5], [22, 8.5]] },
+    helicopter: { sc: 1,
+      fin: P2('M-21 -2.6 L-25 -9 L-27 -9 L-26 -1.5 Z'), finEdge: P2('M-27 -9 L-26 -9 L-25.2 -1.8 L-26 -1.5 Z'),
+      body: P2('M-4 -5 C3 -6.5 10 -5 12 -1 C13 2 11 5 5 5.5 L-4 5.5 C-7 5 -8 3 -8 0 L-24 -1 L-24 -3 L-8 -3.5 C-7 -4.6 -6 -5 -4 -5 Z'),
+      shadeY: 1.5, bellyY: 3.8,
+      glass: [P2('M4.5 -4.9 C9 -4.6 11.5 -2 11.9 0.6 L5.5 0.6 Z')],
+      doors: [[-2.5, -3.6, 3.2, 6]],
+      skids: [[-7, 8.6, 10, 8.6], [-3, 5.4, -4, 8.6], [6, 5.4, 7, 8.6], [10, 8.6, 12, 7.2]],
+      tailRotor: [-25, -5, 3.6], rotor: [0, -7.8, 22],
+      top: 9, bottom: 9,
+      hit: [[12, -1], [5, -6], [22, -7.2], [22, -8.6], [-22, -8.6], [-22, -7.2], [-4, -5.5], [-8, -3.5], [-24, -3],
+            [-25, -9], [-27, -9], [-27, -1], [-8, 0], [-7, 8.6], [12, 8.6], [11, 4]] },
+    propliner: { sc: 0.95,
+      fin: P2('M-16 -4.5 C-19 -9 -21 -15 -25 -15.5 L-27.5 -14.5 L-27 -4.5 Z'), finEdge: P2('M-27.5 -14.5 L-26 -15.2 L-25.6 -4.5 L-27 -4.5 Z'),
+      body: P2('M-28 -4 L12 -5 C21 -5 25 -2 25 0.5 C25 3 21 5 12 5 L-14 5 C-20 5 -24 2 -28.5 -1 Z'),
+      shadeY: 1.6, bellyY: 3.6,
+      windows: [{ x0: -14, x1: 10, step: 4, y: -3, w: 2, h: 2 }],
+      doors: [[-19.2, -3.6, 2.4, 5]],
+      cockpit: P2('M18 -3.6 L22 -2.6 L23.4 -0.8 L18.5 -1 Z'),
+      tailplane: P2('M-18 -1.5 L-28.5 -4.5 L-29.5 -2.3 L-21 1 Z'),
+      wing: P2('M4 2.5 L-4 9.5 L-10 9.5 L-6 2.5 Z'), wingTop: P2('M4 2.5 L-3.8 8.7 L-7.6 8.7 L-4.4 2.5 Z'),
+      nacelles: [[-2, 3.8, 11.5, 4.6]], props: [[10.8, 6.1, 7.5]],
+      fixedGear: [[-23, 1.8, 1.4]],
+      top: 16, bottom: 13.5,
+      hit: [[25, 0.5], [20, -4.5], [-16, -4.5], [-24, -15.5], [-27.5, -14.5], [-27.5, -4], [-29.5, -2.3], [-21, 1],
+            [-14, 5], [-10, 9.5], [-4, 9.5], [-2, 8.4], [10.8, 13.6], [11.8, -1.4], [20, 4.5]] },
+    spitfire: { sc: 1, bodyFill: 'liv',
+      fin: P2('M-15 -2.5 Q-17 -9.5 -20 -9.5 Q-21.5 -9 -21.5 -1 Z'),
+      body: P2('M-21.5 -1.8 L6 -3.8 L13 -3.2 Q15.5 -2.8 16 0 Q15.5 2.8 13 3.2 L4 3.8 L-21.5 1 Z'),
+      shadeY: 1.2, bellyY: null,
+      canopy: P2('M-3.2 -3.5 Q0.5 -7.2 4.8 -3.8 Z'),
+      tailplane: P2('M-16 0 L-23 -1.5 L-23 1.3 Z'),
+      wing: P2('M6 1.5 Q2 6.5 -8 6.5 L-9 6 L-2 1.5 Z'), wingTop: P2('M6 1.5 Q1.8 5.6 -7.2 5.7 L-3 1.5 Z'),
+      roundel: [-9, -0.2, 2.1],
+      spinner: P2('M15.6 -2 L18.4 0 L15.6 2 Z'), noseProp: [17, 0, 8],
+      fixedGear: [[-19.5, 1.5, 1.2]],
+      top: 10, bottom: 8,
+      hit: [[17, -8], [17, 8], [6, 6.5], [-8, 6.5], [-21.5, 1], [-23, 1.3], [-23, -1.5], [-20, -9.5], [-15, -3],
+            [-3, -3.6], [1, -6.4], [5, -3.8], [13, -3.2]] },
   };
-  const playerShape = () => PLAYER_SHAPES[choice.plane.id];
+  // Seaplane: the light plane on floats. Widebody: the airliner with a much bigger engine.
+  CRAFT.seaplane = Object.assign({}, CRAFT.cessna, {
+    gear: null, floats: P2('M-7 7.2 L12 7.2 Q15.2 7.2 16.4 8.8 L14.4 10.2 L-7 10.2 Z'),
+    floatStruts: [[-1, 3.4, -1, 7.2], [9, 3.4, 9, 7.2]],
+    bottom: 10.5,
+    hit: [[16.5, -6.5], [9, -6.4], [-3.5, -6.4], [-10, -3], [-14.5, -11], [-17.5, -11], [-19.8, -2.8], [-17.5, -1],
+          [-14, 0.8], [-7, 3.5], [-7, 10.2], [14.4, 10.2], [16.5, 6.5]] });
+  CRAFT.widebody = Object.assign({}, CRAFT.airliner, {
+    engines: [[-1.5, 6.4, 14, 6]], bottom: 13,
+    hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
+          [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [-1.5, 12.4], [12.5, 12.4], [12.5, 6], [21, 5.5]] });
 
-  // Draws a player plane at the current transform. liv null draws a locked silhouette.
-  function drawPlayerPlane(sh, liv, gear, sc) {
+  // Player hangar: ten planes that unlock with your best score, in six liveries.
+  const PLANES = [
+    { id: 'airliner', name: 'AIRLINER', unlock: 0 },
+    { id: 'cessna', name: 'LIGHT PLANE', unlock: 100 },
+    { id: 'turboprop', name: 'TURBOPROP', unlock: 200 },
+    { id: 'biplane', name: 'BIPLANE', unlock: 300 },
+    { id: 'bizjet', name: 'BUSINESS JET', unlock: 450 },
+    { id: 'seaplane', name: 'SEAPLANE', unlock: 600 },
+    { id: 'regional', name: 'REGIONAL JET', unlock: 800 },
+    { id: 'jumbo', name: 'JUMBO JET', unlock: 1000 },
+    { id: 'concorde', name: 'SUPERSONIC', unlock: 1300 },
+    { id: 'fighter', name: 'FIGHTER JET', unlock: 1600 },
+  ];
+  const COLORS = [
+    { id: 'blue', name: 'Navy', c: '#2b3f93' },
+    { id: 'red', name: 'Signal red', c: '#c8402f' },
+    { id: 'green', name: 'Pine green', c: '#2f7d4f' },
+    { id: 'orange', name: 'Sunset orange', c: '#e0822a' },
+    { id: 'purple', name: 'Royal purple', c: '#6c4bb0' },
+    { id: 'charcoal', name: 'Charcoal', c: '#3a3f47' },
+  ];
+  const colorById = (id) => COLORS.find((c) => c.id === id) || null;
+  let boardBest = () => 0; // points at the board's saved best once the board exists
+  const bestEver = () => Math.max(hi, boardBest());
+  const isUnlocked = (p) => bestEver() >= p.unlock;
+  const choice = {
+    plane: PLANES.find((p) => p.id === store.get('skyline-glide-plane')) || PLANES[0],
+    color: colorById(store.get('skyline-glide-color')) || COLORS[0],
+  };
+  if (!isUnlocked(choice.plane)) choice.plane = PLANES[0];
+  const playerShape = () => CRAFT[choice.plane.id];
+
+  // Draws an aircraft at the current transform. liv null draws a locked silhouette.
+  function drawCraft(sh, liv, gear, sc) {
     const sil = !liv;
     const lw = 0.9 / sc;
     const SIL = 'rgba(96,104,116,0.35)';
     const col = (c) => (sil ? SIL : c);
     const dark = sil ? SIL : darken(liv, 0.72);
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = lw;
-    ctx.strokeStyle = sil ? 'rgba(0,0,0,0)' : PC.out;
+    const OUT = sil ? 'rgba(0,0,0,0)' : PC.out;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = lw; ctx.strokeStyle = OUT;
     const part = (path, fill) => { ctx.fillStyle = fill; ctx.fill(path); ctx.stroke(path); };
     const rr = (x, y, w, h) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2); else ctx.rect(x, y, w, h); };
+    const lines = (list, color, width) => {
+      ctx.strokeStyle = col(color); ctx.lineWidth = width;
+      ctx.beginPath(); for (const [a, b, c, d] of list) { ctx.moveTo(a, b); ctx.lineTo(c, d); } ctx.stroke();
+      ctx.strokeStyle = OUT; ctx.lineWidth = lw;
+    };
+    const wheel = (x, y, r) => { ctx.fillStyle = col(PC.tyre); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
 
-    if (gear && sh.gear) {
-      for (const [gx, gy] of sh.gear) {
-        ctx.fillStyle = col(PC.win); ctx.fillRect(gx - 0.45, gy, 0.9, 5.5);
-        ctx.fillStyle = col(PC.tyre); ctx.beginPath(); ctx.arc(gx, gy + 6.4, 1.9, 0, TAU); ctx.fill();
-      }
+    if (gear && sh.gear) for (const [gx, gy] of sh.gear) { ctx.fillStyle = col(PC.win); ctx.fillRect(gx - 0.45, gy, 0.9, 5.5); wheel(gx, gy + 6.4, 1.9); }
+    if (sh.fixedGear) for (const [gx, gy, len] of sh.fixedGear) {
+      if (len > 2) { lines([[gx - 1.5, gy, gx, gy + len], [gx + 1.5, gy, gx, gy + len]], PC.win, 0.8); wheel(gx, gy + len + 0.5, 2.2); }
+      else wheel(gx, gy + len, 1.2);
     }
     if (sh.farWing) part(sh.farWing, col(PC.wing));
-    if (sh.antenna && !sil) { const [a, b, c, d] = sh.antenna; ctx.strokeStyle = PC.win; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); ctx.strokeStyle = PC.out; }
+    if (sh.antenna && !sil) lines([sh.antenna], PC.win, lw);
     part(sh.fin, col(liv));
-    if (!sil) { ctx.fillStyle = dark; ctx.fill(sh.finEdge); }
-    if (sh.under) part(sh.under, col(PC.shade));
-    if (sh.rearEngines) {
-      ctx.strokeStyle = sil ? 'rgba(0,0,0,0)' : PC.out;
-      for (const [x, y, w, h] of sh.rearEngines) { rr(x, y, w, h); ctx.fillStyle = col(liv); ctx.fill(); ctx.stroke(); if (!sil) { ctx.fillStyle = dark; ctx.fillRect(x + w - 1.1, y + 0.7, 1, h - 1.4); } }
+    if (sh.finEdge && !sil) { ctx.fillStyle = dark; ctx.fill(sh.finEdge); }
+    if (sh.lowerFin) part(sh.lowerFin, col(liv));
+    if (sh.under) part(sh.under, col(PC.white));
+    if (sh.floatStruts) lines(sh.floatStruts, PC.win, 0.8);
+    if (sh.floats) {
+      part(sh.floats, col(PC.white));
+      if (!sil) { ctx.save(); ctx.clip(sh.floats); ctx.fillStyle = liv; ctx.fillRect(-20, 9, 40, 2); ctx.restore(); ctx.stroke(sh.floats); }
+    }
+    if (sh.rearEngines) for (const [x, y, w, h] of sh.rearEngines) {
+      rr(x, y, w, h); ctx.fillStyle = col(liv); ctx.fill(); ctx.stroke();
+      if (!sil) { ctx.fillStyle = dark; ctx.fillRect(x + w - 1.1, y + 0.7, 1, h - 1.4); }
     }
 
-    // fuselage with lower shading and belly stripe
-    part(sh.body, col(sh.military ? PC.steel : PC.white));
+    // fuselage with lower shading, belly stripe and details
+    const bodyFill = sh.bodyFill === 'liv' ? liv : sh.military ? PC.steel : PC.white;
+    part(sh.body, col(bodyFill));
     if (!sil) {
       ctx.save(); ctx.clip(sh.body);
-      ctx.fillStyle = sh.military ? PC.steelShade : PC.shade; ctx.fillRect(-40, sh.shadeY, 80, 20);
+      ctx.fillStyle = sh.bodyFill === 'liv' ? PC.wing : sh.military ? PC.steelShade : PC.shade; ctx.fillRect(-40, sh.shadeY, 80, 20);
       if (sh.bellyY != null) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.bellyY, 80, 20); }
+      if (sh.band) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.band[0], 80, sh.band[1] - sh.band[0]); }
       ctx.restore();
       ctx.stroke(sh.body);
       ctx.fillStyle = PC.win;
       for (const wr of sh.windows || []) for (let x = wr.x0; x <= wr.x1; x += wr.step) ctx.fillRect(x, wr.y, wr.w, wr.h);
       if (sh.ovals) for (let x = sh.ovals.x0; x <= sh.ovals.x1; x += sh.ovals.step) { ctx.beginPath(); ctx.ellipse(x, sh.ovals.y, 0.9, 1.15, 0, 0, TAU); ctx.fill(); }
+      for (const g of sh.glass || []) { ctx.fillStyle = PC.cockpit; ctx.fill(g); }
       ctx.strokeStyle = liv; ctx.lineWidth = 0.75;
       for (const [x, y, w, h] of sh.doors || []) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 0.8); else ctx.rect(x, y, w, h); ctx.stroke(); }
-      ctx.lineWidth = lw; ctx.strokeStyle = PC.out;
+      ctx.lineWidth = lw; ctx.strokeStyle = OUT;
       if (sh.cockpit) { ctx.fillStyle = PC.cockpit; ctx.fill(sh.cockpit); }
-      if (sh.canopy) {
-        ctx.fillStyle = PC.cockpit; ctx.fill(sh.canopy);
+      if (sh.canopy) { ctx.fillStyle = PC.cockpit; ctx.fill(sh.canopy); }
+      if (sh.military) {
         ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(9, -4.6, 2.6, 0.7, -0.2, 0, TAU); ctx.fill();
         ctx.fillStyle = liv; ctx.fillRect(-12, -0.4, 16, 1.3);
         ctx.fillStyle = PC.win; ctx.fillRect(-1, -1.2, 6, 2.6);
+      }
+      if (sh.roundel) {
+        const [x, y, r] = sh.roundel;
+        ctx.fillStyle = PC.white; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+        ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, TAU); ctx.fill();
       }
     }
     if (sh.tailplane) part(sh.tailplane, col(PC.wing));
     if (sh.highWing) part(sh.highWing, col(PC.wing));
     if (sh.wing) {
-      part(sh.wing, col(sh.military ? PC.steelShade : PC.wingShade));
-      if (!sil) { ctx.fillStyle = sh.military ? PC.steel : PC.wing; ctx.fill(sh.wingTop); }
+      const wf = sh.wingFill === 'liv' ? liv : sh.military ? PC.steelShade : sh.bodyFill === 'liv' ? dark : PC.wingShade;
+      part(sh.wing, col(wf));
+      if (!sil && sh.wingTop) { ctx.fillStyle = sh.military ? PC.steel : sh.bodyFill === 'liv' ? liv : PC.wing; ctx.fill(sh.wingTop); }
       if (!sil && sh.military) { ctx.fillStyle = liv; ctx.fillRect(-10, 2.3, 6, 1.3); }
     }
     for (const [x, y, w, h] of (sh.engines || []).concat(sh.nacelles || [])) {
       rr(x, y, w, h); ctx.fillStyle = col(liv); ctx.fill(); ctx.stroke();
       if (!sil) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + 2, y + 0.8, w - 4, 0.9); ctx.fillStyle = dark; ctx.fillRect(x + w - 1.2, y + 0.7, 1, h - 1.4); }
     }
-    if (sh.props && !sil) for (const [x, y, r] of sh.props) propDisc(x, y, r, 34);
+    if (sh.cowl) part(sh.cowl, col(PC.steel));
+    if (!sil) for (const [x, y, r] of (sh.props || []).concat(sh.noseProp ? [sh.noseProp] : [])) propDisc(x, y, r, 34);
+    if (sh.spinner) part(sh.spinner, col(liv));
+    if (sh.upperWing) { if (sh.struts) lines(sh.struts, PC.win, 0.8); part(sh.upperWing, col(liv)); }
+    else if (sh.struts) lines(sh.struts, PC.wingShade, 0.9);
+    if (sh.skids) lines(sh.skids, PC.win, 1);
+    if (sh.rotor) {
+      const [x, y, span] = sh.rotor;
+      lines([[x, y + 2.8, x, y]], PC.win, 1);
+      if (!sil) {
+        const k2 = Math.abs(Math.cos(t * 22));
+        ctx.fillStyle = 'rgba(80,88,100,0.18)'; ctx.beginPath(); ctx.ellipse(x, y, span, 1.2, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = PC.win; ctx.fillRect(x - span * k2, y - 0.5, span * 2 * k2, 1);
+      }
+      if (sh.tailRotor && !sil) propDisc(sh.tailRotor[0], sh.tailRotor[1], sh.tailRotor[2], 40);
+    }
     if (sh.military && !sil) {
       const fl = 7 + Math.sin(t * 40) * 2.5;
       ctx.fillStyle = FLAME; ctx.beginPath(); ctx.moveTo(-20, -2.3); ctx.lineTo(-20 - fl, 0); ctx.lineTo(-20, 2.3); ctx.closePath(); ctx.fill();
       ctx.fillStyle = FLAME_CORE; ctx.beginPath(); ctx.moveTo(-20, -1.2); ctx.lineTo(-20 - fl * 0.55, 0); ctx.lineTo(-20, 1.2); ctx.closePath(); ctx.fill();
     }
   }
-  function drawPlayerAt(id, x, y, ang, sc, liv, gear) {
+  function drawCraftAt(sh, x, y, ang, flip, sc, liv, gear) {
     ctx.save();
-    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(sc, sc);
-    drawPlayerPlane(PLAYER_SHAPES[id], liv, gear, sc);
+    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(flip * sc, sc);
+    drawCraft(sh, liv, gear, sc);
     ctx.restore();
   }
 
-  // Oncoming traffic by era: each unlocks at a score and is faster and more aggressive than the last.
+  // Oncoming traffic: ten types, each unlocking at a score and faster or more aggressive than the last.
+  // track: how hard it steers toward your altitude; warn: seconds of edge warning before it appears.
   const TRAFFIC = [
-    { models: ['biplane'], unlock: 0, v: [25, 55], sc: [0.95, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0,
-      liveries: ['#c9483a', '#d9a62e', '#3f7a4a'] },
-    { models: ['prop', 'turboprop'], unlock: 200, v: [55, 95], sc: [0.85, 0.95], track: 6, wobble: 2, gap: 1.0, warn: 0,
-      liveries: ['#2e6f9a', '#8a5a2b', '#b8433a'] },
-    { models: ['jet', 'jet', 'jumbo', 'bizjet'], unlock: 450, v: [95, 150], sc: [0.8, 0.95], track: 16, wobble: 0, gap: 0.95, warn: 0.5,
-      liveries: ['#d0503c', '#2e9a8a', '#e08a2c', '#7a5bb5', '#c23b6b'] },
-    { models: ['fighter'], unlock: 800, v: [190, 260], sc: [0.95, 1.05], track: 55, wobble: 0, gap: 0.8, warn: 0.9,
-      liveries: ['#5b6670', '#4f6b4a', '#6a5a8a'] },
+    { id: 'biplane', unlock: 0, v: [25, 55], sc: [1, 1.1], track: 0, wobble: 6, gap: 1.15, warn: 0 },
+    { id: 'blimp', unlock: 0, v: [5, 18], sc: [0.9, 1], track: 0, wobble: 3, gap: 1.4, warn: 0 },
+    { id: 'cessna', unlock: 100, v: [35, 65], sc: [1.05, 1.15], track: 0, wobble: 3, gap: 1.1, warn: 0 },
+    { id: 'helicopter', unlock: 200, v: [20, 45], sc: [1, 1.1], track: 10, wobble: 5, gap: 1.1, warn: 0 },
+    { id: 'propliner', unlock: 300, v: [55, 95], sc: [0.9, 1], track: 6, wobble: 2, gap: 1, warn: 0 },
+    { id: 'spitfire', unlock: 450, v: [110, 160], sc: [1, 1.1], track: 20, wobble: 1, gap: 0.95, warn: 0.4 },
+    { id: 'regional', unlock: 600, v: [95, 140], sc: [0.9, 1], track: 12, wobble: 0, gap: 0.95, warn: 0.4 },
+    { id: 'widebody', unlock: 800, v: [100, 150], sc: [1, 1.1], track: 14, wobble: 0, gap: 0.95, warn: 0.5 },
+    { id: 'concorde', unlock: 1000, v: [220, 280], sc: [0.9, 1], track: 8, wobble: 0, gap: 0.9, warn: 0.9 },
+    { id: 'fighter', unlock: 1200, v: [190, 260], sc: [0.95, 1.05], track: 55, wobble: 0, gap: 0.8, warn: 0.9 },
   ];
 
   function modelPoly(m, x, y, ang, flip, sc) {
@@ -973,13 +900,6 @@
       const a = lx * flip * sc, b = ly * sc;
       return [x + a * c - b * s, y + a * s + b * c];
     });
-  }
-  function drawModel(m, x, y, ang, flip, sc, liv, seed) {
-    ctx.save();
-    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(flip * sc, sc);
-    ctx.lineWidth = 1.3 / sc; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = P.ink;
-    m.draw(liv, seed);
-    ctx.restore();
   }
 
   // ---------- collision helpers ----------
@@ -1337,14 +1257,14 @@
     const w = pv.clientWidth, h = pv.clientHeight;
     if (!w || !h) return;
     if (pv.width !== Math.round(w * dpr) || pv.height !== Math.round(h * dpr)) { pv.width = Math.round(w * dpr); pv.height = Math.round(h * dpr); }
-    const view = PLANES[viewIdx], sh = PLAYER_SHAPES[view.id];
+    const view = PLANES[viewIdx], sh = CRAFT[view.id];
     const tall = sh.top + sh.bottom + 7;
     const sc = Math.min(w * 0.85 / 70, h * 0.95 / tall);
     ctx = pctx;
     pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     pctx.clearRect(0, 0, w, h);
     const y = (h - tall * sc) / 2 + sh.top * sc + Math.sin(t * 2.4) * 1.5;
-    drawPlayerAt(view.id, w / 2, y, 0, sc, isUnlocked(view) ? choice.color.c : null, true);
+    drawCraftAt(sh, w / 2, y, 0, 1, sc, isUnlocked(view) ? choice.color.c : null, true);
     ctx = mainCtx;
   }
 
@@ -1422,11 +1342,10 @@
 
   function pickTraffic() {
     const open = TRAFFIC.filter((m) => score >= m.unlock);
-    const newest = open[open.length - 1];
-    return open.length > 1 && Math.random() < 0.4 ? pick(open.slice(0, -1)) : newest;
+    return Math.random() < 0.55 ? pick(open.slice(-2)) : pick(open);
   }
   function trySpawnEnemy(diff) {
-    const tr = pickTraffic(), m = MODELS[pick(tr.models)];
+    const tr = pickTraffic(), m = CRAFT[tr.id];
     const sc = rand(tr.sc[0], tr.sc[1]);
     const v = rand(tr.v[0], tr.v[1] + 30 * diff);
     // Start far enough right that a warning shows for tr.warn seconds before it appears.
@@ -1445,7 +1364,7 @@
     const aim = Math.random() < (tr.track ? 0.8 : 0.5);
     const y = aim ? clamp(player.y + rand(-25, 25), yMin, yMax) : rand(yMin, yMax);
     for (const e of enemies) if (e.x > W * 0.45 && Math.abs(e.base - y) < 36) { enemyTimer = 0.5; return; }
-    enemies.push({ x: ex, base: y, y, yMin, yMax, v, sc, tr, m, liv: pick(tr.liveries), seed: randi(1, 1e6) });
+    enemies.push({ x: ex, base: y, y, yMin, yMax, v, sc, tr, m, liv: pick(COLORS).c, seed: randi(1, 1e6) });
     enemyTimer = (rand(2.4, 4.2) - diff * 1.2) * tr.gap;
   }
 
@@ -1623,13 +1542,13 @@
         }
         continue;
       }
-      drawModel(e.m, e.x, e.y, 0, -1, e.sc, e.liv, e.seed);
+      drawCraftAt(e.m, e.x, e.y, 0, -1, e.sc, e.liv, false);
     }
 
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
     ctx.globalAlpha = 1;
-    drawPlayerAt(choice.plane.id, px, player.y, player.angle, playerShape().sc, choice.color.c, false);
+    drawCraftAt(playerShape(), px, player.y, player.angle, 1, playerShape().sc, choice.color.c, false);
 
     for (const p of puffs) {
       ctx.globalAlpha = Math.max(0, p.life);
