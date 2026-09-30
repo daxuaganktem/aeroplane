@@ -37,6 +37,8 @@ The board shows the all-time top 10 pilots, one row per pilot (their best run). 
    grant select, insert on public.scores to anon;
    ```
 
-3. In **Project Settings → API**, copy the Project URL and the `anon` public key into `SUPABASE_URL` and `SUPABASE_ANON_KEY` near the top of the script in `src/game.html`, then run `./build.sh`.
+3. In **Project Settings → API Keys**, copy the Project URL and the publishable key (`sb_publishable_…`, or the legacy `anon` key) into `SUPABASE_URL` and `SUPABASE_ANON_KEY` near the top of the script in `src/game.html`, then run `./build.sh`. The key is sent only in the `apikey` header.
 
-The anon key is meant to be public. The policies above allow reading and adding scores but not editing or deleting them. Scores are submitted by the browser, so a determined player could post a fake one. That's fine for a casual game, but it isn't cheat-proof.
+This repo is already connected to its own Supabase project, so the GitHub Pages build uses the global board.
+
+The publishable key is meant to be public. The policies above allow reading and adding scores but not editing or deleting them. Scores are submitted by the browser, so a determined player could post a fake one. That's fine for a casual game, but it isn't cheat-proof.
