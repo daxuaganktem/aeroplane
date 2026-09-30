@@ -10,6 +10,7 @@
     --bg: #e3f2f8;
     --ink: #535353;
     --warn: #d0503c;
+    --gold: #d9a520;
     --pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
     color-scheme: light;
   }
@@ -188,6 +189,47 @@
     .actions .px { min-height: 36px; }
   }
 
+  /* tabs on the right-hand card: top 10, daily challenges, achievements */
+  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; flex: none; }
+  .tab {
+    font: inherit; letter-spacing: inherit;
+    min-height: 34px; padding: 6px 2px;
+    border: 2px solid var(--ink); border-radius: 2px;
+    background: var(--sky); color: var(--ink);
+    cursor: pointer;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--sky); }
+  .tab span { opacity: 0.75; }
+  .pane { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; }
+  #dailyList, #awardList {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; align-content: start; gap: 10px;
+    flex: 1 1 auto; min-height: 64px;
+    overflow-y: auto; touch-action: pan-y;
+  }
+  #dailyList li { display: grid; gap: 6px; }
+  .drow { display: flex; justify-content: space-between; gap: 10px; }
+  .drow span:last-child { flex: none; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; box-sizing: border-box; border: 2px solid var(--ink); padding: 1px; }
+  .bar i { display: block; height: 100%; background: var(--ink); }
+  #dailyList li.done .drow span:last-child { color: var(--warn); }
+  #awardList li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: start; opacity: 0.5; }
+  #awardList li.got { opacity: 1; }
+  #awardList .box { width: 12px; height: 12px; margin-top: 2px; box-sizing: border-box; border: 2px solid var(--ink); }
+  #awardList li.got .box { background: var(--gold); border-color: var(--gold); }
+  #awardList .desc { opacity: 0.75; font-size: 0.9em; margin-top: 3px; }
+  #toast {
+    position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 50px);
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px); box-sizing: border-box;
+    padding: 8px 12px;
+    background: var(--sky); color: var(--ink);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font: clamp(8px, 2.2vw, 10px)/1.6 var(--pixel); letter-spacing: 0.06em;
+    text-align: center; text-wrap: balance;
+    pointer-events: none; z-index: 5;
+  }
+  #toast.gold { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold) inset; }
   .blink { animation: blink 0.25s steps(1) 4; }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes pulse { 50% { opacity: 0.35; } }
@@ -205,6 +247,7 @@
     <path id="cross" d="M17 9l5 6M22 9l-5 6" style="display:none"/>
   </svg>
 </button>
+<div id="toast" role="status" aria-live="polite" hidden></div>
 <div id="fuel" hidden><span id="fuelLabel">FUEL</span><div id="fuelBar"><div id="fuelFill"></div></div></div>
 <div id="overlay">
   <div id="ovHead">
@@ -242,10 +285,25 @@
       <button class="px" id="flyBtn" type="button">FLY</button>
     </div>
   </section>
-  <section id="right" class="card" aria-label="Top pilots">
-    <div class="cardHead"><span>TOP 10 PILOTS</span><span id="boardScope">THIS DEVICE</span></div>
-    <ol id="boardList"></ol>
-    <div id="boardNote" hidden></div>
+  <section id="right" class="card" aria-label="Top pilots, daily challenges and achievements">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" id="tab-board" aria-controls="pane-board" aria-selected="true">TOP 10</button>
+      <button type="button" class="tab" role="tab" id="tab-daily" aria-controls="pane-daily" aria-selected="false">DAILY <span id="dailyCount"></span></button>
+      <button type="button" class="tab" role="tab" id="tab-awards" aria-controls="pane-awards" aria-selected="false">AWARDS <span id="awardCount"></span></button>
+    </div>
+    <div class="pane" id="pane-board" role="tabpanel" aria-labelledby="tab-board">
+      <div class="cardHead"><span>ALL-TIME PILOTS</span><span id="boardScope">THIS DEVICE</span></div>
+      <ol id="boardList"></ol>
+      <div id="boardNote" hidden></div>
+    </div>
+    <div class="pane" id="pane-daily" role="tabpanel" aria-labelledby="tab-daily" hidden>
+      <div class="cardHead"><span>TODAY'S CHALLENGES</span><span id="dailyReset"></span></div>
+      <ol id="dailyList"></ol>
+    </div>
+    <div class="pane" id="pane-awards" role="tabpanel" aria-labelledby="tab-awards" hidden>
+      <div class="cardHead"><span>ACHIEVEMENTS</span><span id="awardsTotal"></span></div>
+      <ol id="awardList"></ol>
+    </div>
   </section>
 </div>
 
@@ -370,7 +428,191 @@
     return { x, hf, towers, width: dx };
   }
 
+  // Top of a building: hk scales a landmark's lower wing relative to the cluster's height.
+  const towerTop = (c, tw) => groundY - c.hf * playH * (tw.hk || 1);
+
+  // ---------- landmarks ----------
+  // Now and then a famous-shaped cluster replaces an ordinary one.
+  const LANDMARKS = { twin: 'TWIN TOWERS', stadium: 'STADIUM', tvtower: 'TV TOWER', clock: 'CLOCK TOWER', pyramid: 'PYRAMID TOWER' };
+  let lastLandmark = '', sinceLandmark = 0;
+  const baseTower = (extra) => Object.assign({ dx: 0, w: 40, shape: 'block', extra: 'none', shade: randi(0, 2), o: 1,
+    seed: randi(1, 1e9), style: 0, awning: pick(AWNINGS), beacon: true }, extra);
+  function makeLandmark(x, diff) {
+    const lm = pick(Object.keys(LANDMARKS).filter((k) => k !== lastLandmark));
+    lastLandmark = lm;
+    let hf, towers;
+    switch (lm) {
+      case 'twin': hf = rand(0.5, 0.56 + 0.04 * diff);
+        towers = [baseTower({ w: 28, shape: 'antenna', style: 2, shade: 0 }), baseTower({ dx: 38, w: 28, style: 2, shade: 0 })]; break;
+      case 'stadium': hf = rand(0.13, 0.17);
+        towers = [baseTower({ w: 170, lm, beacon: false })]; break;
+      case 'tvtower': hf = rand(0.5, 0.6);
+        towers = [baseTower({ w: 44, lm })]; break;
+      case 'clock': hf = rand(0.42, 0.5);
+        towers = [baseTower({ w: 30, lm, style: 2, beacon: false }),
+                  baseTower({ dx: 31, w: 64, shape: 'crown', style: 3, hk: 0.45, beacon: false })]; break;
+      default: hf = rand(0.5, 0.6);
+        towers = [baseTower({ w: 52, lm: 'pyramid' })];
+    }
+    lastHf = hf;
+    const last = towers[towers.length - 1];
+    return { x, hf, towers, width: last.dx + last.w, lm };
+  }
+  function landmarkRects(tw, x, y0) {
+    const w = tw.w, cx = x + w / 2, hB = groundY - y0;
+    switch (tw.lm) {
+      case 'stadium': {
+        const mh = Math.max(26, hB * 0.6), r = [[x, y0 - 3, w, hB + 3]];
+        for (const f of [0.1, 0.36, 0.64, 0.9]) { const mx = x + w * f; r.push([mx - 1.2, y0 - mh, 2.4, mh], [mx - 4.5, y0 - mh - 1, 9, 4.5]); }
+        return r;
+      }
+      case 'tvtower': {
+        const aH = Math.min(30, hB * 0.2);
+        return [[cx - 17, y0, 34, 10], [cx - 12, y0 + 10, 24, 8], [cx - 3.5, y0, 7, hB], [cx - 13, groundY - 18, 26, 18], [cx - 1.5, y0 - aH, 3, aH]];
+      }
+      case 'clock': {
+        const rH = Math.min(26, hB * 0.2);
+        return [[x - 1.5, y0 - 1, w + 3, hB + 1], [x + 3, y0 - rH * 0.6, w - 6, rH * 0.6], [cx - 1.5, y0 - rH, 3, rH * 0.4], [x, y0 - 6, 3, 6], [x + w - 3, y0 - 6, 3, 6]];
+      }
+      case 'pyramid': {
+        const r = [], sH = Math.min(30, hB * 0.18);
+        for (let i = 0; i < 6; i++) { const bw = 10 + (w - 10) * (i + 1) / 6; r.push([cx - bw / 2, y0 + hB * i / 6, bw, hB / 6 + 0.5]); }
+        r.push([cx - 2.5, y0 - sH, 5, sH]);
+        return r;
+      }
+    }
+    return [[x, y0, w, hB]];
+  }
+  function beaconAt(tw, bx, by) {
+    const ph = (t * 0.9 + (tw.seed % 10) / 10) % 1;
+    if (ph < 0.08 || (ph > 0.16 && ph < 0.24)) {
+      ctx.fillStyle = 'rgba(240,70,50,0.35)'; ctx.beginPath(); ctx.arc(bx, by, 4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#f04632'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, TAU); ctx.fill();
+    } else {
+      ctx.fillStyle = '#a3372a'; ctx.beginPath(); ctx.arc(bx, by, 1.2, 0, TAU); ctx.fill();
+    }
+  }
+  function drawLandmark(tw, x, y0) {
+    const w = tw.w, cx = x + w / 2, hB = groundY - y0, night = nightMix > 0.4;
+    ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = P.ink;
+
+    if (tw.lm === 'stadium') {
+      const mh = Math.max(26, hB * 0.6);
+      // floodlight masts behind the stands, throwing light onto the pitch at night
+      for (const f of [0.1, 0.36, 0.64, 0.9]) {
+        const mx = x + w * f, top = y0 - mh, aim = cx + (mx - cx) * 0.25;
+        ctx.beginPath(); ctx.moveTo(mx, y0); ctx.lineTo(mx, top); ctx.lineWidth = 1.6; ctx.stroke(); ctx.lineWidth = 1.4;
+        if (night) {
+          ctx.fillStyle = 'rgba(255,240,190,0.13)';
+          ctx.beginPath(); ctx.moveTo(mx - 4, top + 3); ctx.lineTo(mx + 4, top + 3); ctx.lineTo(aim + 16, y0 + 4); ctx.lineTo(aim - 16, y0 + 4); ctx.closePath(); ctx.fill();
+        }
+        ctx.fillStyle = night ? P.lit : P.trim; ctx.beginPath(); ctx.rect(mx - 4.5, top - 1, 9, 4.5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = night ? '#fff6d8' : P.glint; for (let i = 0; i < 3; i++) ctx.fillRect(mx - 3.5 + i * 2.6, top + 0.3, 1.6, 2);
+      }
+      // the bowl, wider at the rim
+      const bowl = new Path2D();
+      bowl.moveTo(x + 12, groundY); bowl.lineTo(x + 3, y0 + hB * 0.4); bowl.quadraticCurveTo(x, y0 + 3, x + 3, y0);
+      bowl.lineTo(x + w - 3, y0); bowl.quadraticCurveTo(x + w, y0 + 3, x + w - 3, y0 + hB * 0.4); bowl.lineTo(x + w - 12, groundY); bowl.closePath();
+      ctx.fillStyle = P.t1; ctx.fill(bowl);
+      ctx.save(); ctx.clip(bowl);
+      // seating tiers in team colours, with a crowd that does the odd wave
+      for (let r = 0, yy = y0 + 4; yy < y0 + hB * 0.62; r++, yy += 5) {
+        ctx.fillStyle = r % 2 ? P.tside : tw.awning; ctx.fillRect(x, yy, w, 3.2);
+        ctx.fillStyle = r % 2 ? P.win : P.t0;
+        for (let c = 0; c < w / 3; c++) {
+          if (hash(tw.seed, r, c) > 0.55) continue;
+          const hop = Math.sin(t * 3 - c * 0.25) > 0.93 ? -1 : 0;
+          ctx.fillRect(x + c * 3 + (r % 2) * 1.5, yy - 1.2 + hop, 1.4, 1.4);
+        }
+      }
+      // concourse with entrance arches
+      ctx.fillStyle = P.lobby; ctx.fillRect(x, groundY - 12, w, 12);
+      ctx.fillStyle = night ? P.lit : P.glass;
+      for (let ax = x + 16; ax < x + w - 20; ax += 12) {
+        ctx.beginPath(); ctx.moveTo(ax, groundY); ctx.lineTo(ax, groundY - 6); ctx.arc(ax + 3, groundY - 6, 3, Math.PI, 0); ctx.lineTo(ax + 6, groundY); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+      ctx.stroke(bowl);
+      // roof canopy and flags along the rim
+      ctx.fillStyle = P.trim; ctx.beginPath(); ctx.rect(x - 2, y0 - 3, w + 4, 3.5); ctx.fill(); ctx.lineWidth = 0.9; ctx.stroke();
+      for (let fx = x + 20, i = 0; fx < x + w - 10; fx += 26, i++) {
+        ctx.beginPath(); ctx.moveTo(fx, y0 - 3); ctx.lineTo(fx, y0 - 11); ctx.lineWidth = 0.8; ctx.stroke();
+        const wave = Math.sin(t * 5 + i) * 1.2;
+        ctx.fillStyle = AWNINGS[i % AWNINGS.length];
+        ctx.beginPath(); ctx.moveTo(fx, y0 - 11); ctx.lineTo(fx + 6, y0 - 9.5 + wave); ctx.lineTo(fx, y0 - 8); ctx.closePath(); ctx.fill();
+      }
+      ctx.lineWidth = 1.4;
+      return;
+    }
+
+    if (tw.lm === 'tvtower') {
+      const aH = Math.min(30, hB * 0.2);
+      ctx.fillStyle = P.t2;
+      ctx.beginPath(); ctx.moveTo(cx - 13, groundY); ctx.lineTo(cx - 3.5, groundY - 18); ctx.lineTo(cx + 3.5, groundY - 18); ctx.lineTo(cx + 13, groundY); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.t0; ctx.beginPath(); ctx.rect(cx - 3.5, y0 + 10, 7, hB - 28); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.tside; ctx.fillRect(cx + 1, y0 + 11, 2.2, hB - 30);
+      // a lift climbing the shaft
+      const lift = y0 + 20 + ((t * 30) % Math.max(10, hB - 44));
+      ctx.fillStyle = night ? P.lit : P.glint; ctx.fillRect(cx - 2.6, lift, 2.6, 3.2);
+      ctx.beginPath(); ctx.moveTo(cx, y0); ctx.lineTo(cx, y0 - aH); ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1.4;
+      ctx.fillStyle = P.trim; ctx.beginPath(); ctx.rect(cx - 1.5, y0 - aH * 0.5, 3, aH * 0.5); ctx.fill(); ctx.stroke();
+      // observation pod
+      ctx.fillStyle = P.t1;
+      ctx.beginPath(); ctx.moveTo(cx - 12, y0 + 10); ctx.lineTo(cx + 12, y0 + 10); ctx.lineTo(cx + 3.5, y0 + 18); ctx.lineTo(cx - 3.5, y0 + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.trim; ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(cx - 17, y0, 34, 10, 4); else ctx.rect(cx - 17, y0, 34, 10);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = night ? P.lit : P.glass; ctx.fillRect(cx - 14, y0 + 3.5, 28, 3);
+      ctx.fillStyle = P.trim; for (let i = -12; i <= 12; i += 4) ctx.fillRect(cx + i, y0 + 3.5, 0.8, 3);
+      beaconAt(tw, cx, y0 - aH);
+      return;
+    }
+
+    if (tw.lm === 'clock') {
+      const rH = Math.min(26, hB * 0.2), fr = w * 0.34, fy = y0 + w * 0.62;
+      // roof, corner pinnacles and spire
+      ctx.fillStyle = P.trim;
+      ctx.beginPath(); ctx.moveTo(x + 3, y0); ctx.lineTo(cx, y0 - rH * 0.6 - 2); ctx.lineTo(x + w - 3, y0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, y0 - rH * 0.6); ctx.lineTo(cx, y0 - rH); ctx.stroke();
+      ctx.fillStyle = P.t1;
+      for (const qx of [x + 1.5, x + w - 1.5]) { ctx.beginPath(); ctx.moveTo(qx - 1.5, y0); ctx.lineTo(qx, y0 - 6); ctx.lineTo(qx + 1.5, y0); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      // shaft with narrow gothic windows below the clock
+      ctx.fillStyle = P['t' + tw.shade]; ctx.fillRect(x, y0, w, hB);
+      ctx.fillStyle = P.tside; ctx.fillRect(x + w * 0.8, y0, w * 0.2, hB);
+      drawWindows(tw, x, y0 + w * 1.15);
+      ctx.strokeStyle = P.ink; ctx.beginPath(); ctx.rect(x, y0, w, hB); ctx.stroke();
+      ctx.fillStyle = P.trim; ctx.beginPath(); ctx.rect(x - 1.5, y0 - 1, w + 3, 3); ctx.rect(x - 1.5, fy + fr + 3, w + 3, 2.5); ctx.fill(); ctx.lineWidth = 0.9; ctx.stroke(); ctx.lineWidth = 1.4;
+      // the clock shows the real time
+      ctx.fillStyle = night ? P.lit : '#f4efe2'; ctx.beginPath(); ctx.arc(cx, fy, fr, 0, TAU); ctx.fill(); ctx.stroke();
+      const now = new Date(), mins = now.getMinutes() + now.getSeconds() / 60, hrs = (now.getHours() % 12) + mins / 60;
+      ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1.2; ctx.beginPath();
+      ctx.moveTo(cx, fy); ctx.lineTo(cx + Math.sin(hrs / 12 * TAU) * fr * 0.5, fy - Math.cos(hrs / 12 * TAU) * fr * 0.5);
+      ctx.moveTo(cx, fy); ctx.lineTo(cx + Math.sin(mins / 60 * TAU) * fr * 0.8, fy - Math.cos(mins / 60 * TAU) * fr * 0.8);
+      ctx.stroke(); ctx.lineWidth = 1.4; ctx.strokeStyle = P.ink;
+      ctx.fillStyle = P.lobby;
+      ctx.beginPath(); ctx.moveTo(cx - 4, groundY); ctx.lineTo(cx - 4, groundY - 7); ctx.arc(cx, groundY - 7, 4, Math.PI, 0); ctx.lineTo(cx + 4, groundY); ctx.closePath(); ctx.fill();
+      return;
+    }
+
+    // pyramid tower
+    const sH = Math.min(30, hB * 0.18);
+    const body = new Path2D();
+    body.moveTo(x, groundY); body.lineTo(cx - 5, y0); body.lineTo(cx + 5, y0); body.lineTo(x + w, groundY); body.closePath();
+    ctx.fillStyle = P['t' + tw.shade]; ctx.fill(body);
+    ctx.save(); ctx.clip(body);
+    ctx.fillStyle = P.tside;
+    ctx.beginPath(); ctx.moveTo(cx + 1.5, y0); ctx.lineTo(cx + 5, y0); ctx.lineTo(x + w, groundY); ctx.lineTo(cx + w * 0.22, groundY); ctx.closePath(); ctx.fill();
+    drawWindows(tw, x, y0);
+    ctx.restore();
+    ctx.stroke(body);
+    ctx.fillStyle = P.trim; ctx.beginPath(); ctx.moveTo(cx - 5, y0); ctx.lineTo(cx, y0 - sH); ctx.lineTo(cx + 5, y0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.lobby; ctx.fillRect(x + 7, groundY - 10, w - 14, 10);
+    ctx.fillStyle = night ? P.lit : P.glass; for (let lx = x + 10; lx < x + w - 12; lx += 6) ctx.fillRect(lx, groundY - 8, 4, 8);
+    beaconAt(tw, cx, y0 - sH);
+  }
+
   function towerRects(tw, x, y0) {
+    if (tw.lm) return landmarkRects(tw, x, y0);
     const w = tw.w, cx = x + w / 2, oH = ornUnit(groundY - y0) * tw.o;
     const r = [[x - 1.5, y0 - 1, w + 3, groundY - y0 + 1]];
     switch (tw.shape) {
@@ -431,6 +673,7 @@
   }
 
   function drawTower(tw, x, y0) {
+    if (tw.lm) return drawLandmark(tw, x, y0);
     const w = tw.w, cx = x + w / 2, hB = groundY - y0, oH = ornUnit(hB) * tw.o;
     const fill = P['t' + tw.shade];
     ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -1295,6 +1538,204 @@
 
 
 
+  // ---------- toasts ----------
+  const toastEl = $('toast'), toastQueue = [];
+  let toastT = 0;
+  function toast(text, kind) { toastQueue.push({ text, kind: kind || '' }); }
+  function updateToast(dt) {
+    if (toastT > 0) { toastT -= dt; if (toastT <= 0) toastEl.hidden = true; return; }
+    const m = toastQueue.shift();
+    if (!m) return;
+    toastEl.textContent = m.text; toastEl.className = m.kind; toastEl.hidden = false; toastT = 2.6;
+  }
+
+  // ---------- achievements and daily challenges ----------
+  const loadJSON = (key, fallback) => { try { return Object.assign(fallback, JSON.parse(store.get(key)) || {}); } catch (e) { return fallback; } };
+  const stats = loadJSON('skyline-glide-stats', { runs: 0, total: 0, nightfalls: 0, sunrises: 0, landmarks: {}, types: {}, dailyDone: 0, dailySweeps: 0, got: {} });
+  const saveStats = () => store.set('skyline-glide-stats', JSON.stringify(stats));
+  let run = null, progTimer = 0; // this flight's counters
+  const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false });
+  const count = (o) => Object.keys(o).length;
+
+  // test(best) gets the best score so far, this run included
+  const ACHIEVEMENTS = [
+    { id: 'first', name: 'FIRST FLIGHT', desc: 'Finish your first run.', test: () => stats.runs >= 1 },
+    { id: 's250', name: 'CLEARED FOR TAKEOFF', desc: 'Score 250 in one run.', test: (b) => b >= 250 },
+    { id: 's500', name: 'CRUISING ALTITUDE', desc: 'Score 500 in one run.', test: (b) => b >= 500 },
+    { id: 's1000', name: 'FREQUENT FLYER', desc: 'Score 1,000 in one run.', test: (b) => b >= 1000 },
+    { id: 's2000', name: 'SKY ACE', desc: 'Score 2,000 in one run.', test: (b) => b >= 2000 },
+    { id: 'night', name: 'NIGHT OWL', desc: 'Keep flying as night falls.', test: () => stats.nightfalls >= 1 },
+    { id: 'dawn', name: 'RED-EYE', desc: 'Fly through the night until sunrise.', test: () => stats.sunrises >= 1 },
+    { id: 'sight', name: 'SIGHTSEER', desc: 'Fly past a landmark.', test: () => count(stats.landmarks) >= 1 },
+    { id: 'tour', name: 'GRAND TOUR', desc: 'Fly past all five landmarks.', test: () => count(stats.landmarks) >= 5 },
+    { id: 'dodge', name: 'TRAFFIC DODGER', desc: 'Pass 25 aircraft in one run.', test: () => !!run && run.passed >= 25 },
+    { id: 'blimp', name: 'BLIMP SPOTTER', desc: 'Pass a blimp.', test: () => !!stats.types.blimp },
+    { id: 'topgun', name: 'TOP GUN', desc: 'Pass a fighter jet.', test: () => !!stats.types.fighter },
+    { id: 'spotter', name: 'PLANE SPOTTER', desc: 'Pass all ten kinds of oncoming aircraft.', test: () => count(stats.types) >= TRAFFIC.length },
+    { id: 'miser', name: 'EASY ON THE THROTTLE', desc: 'Score 300 without running out of fuel.', test: () => !!run && run.clean >= 300 },
+    { id: 'deadstick', name: 'DEAD STICK', desc: 'Stay airborne 5 seconds after running out of fuel.', test: () => !!run && run.deadstick },
+    { id: 'collector', name: 'COLLECTOR', desc: 'Unlock 5 planes.', test: () => PLANES.filter(isUnlocked).length >= 5 },
+    { id: 'hangar', name: 'FULL HANGAR', desc: 'Unlock all 10 planes.', test: () => PLANES.every(isUnlocked) },
+    { id: 'daily', name: 'DAILY FLYER', desc: 'Finish all three daily challenges in one day.', test: () => stats.dailySweeps >= 1 },
+    { id: 'daily10', name: 'COMMITTED', desc: 'Finish 10 daily challenges.', test: () => stats.dailyDone >= 10 },
+    { id: 'longhaul', name: 'LONG HAUL', desc: 'Score 10,000 points across all runs.', test: () => stats.total + (state === 'playing' ? score : 0) >= 10000 },
+    { id: 'persistent', name: 'PERSISTENT', desc: 'Play 50 runs.', test: () => stats.runs >= 50 },
+  ];
+  function checkAchievements() {
+    const best = Math.max(hi, state === 'playing' ? score : 0);
+    let any = false;
+    for (const a of ACHIEVEMENTS) {
+      if (stats.got[a.id] || !a.test(best)) continue;
+      stats.got[a.id] = Date.now(); any = true;
+      toast(`ACHIEVEMENT · ${a.name}`, 'gold'); sfx.point();
+    }
+    if (any) { saveStats(); renderTabs(); }
+  }
+
+  // Three challenges a day, picked from the date so everyone gets the same three. They reset at local midnight.
+  const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  function seeded(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  }
+  const oneOf = (r, list) => list[Math.floor(r() * list.length)];
+  const TYPE_PLURAL = { biplane: 'BIPLANES', blimp: 'BLIMPS', cessna: 'LIGHT PLANES', helicopter: 'HELICOPTERS' };
+  const DAILY_POOL = [
+    (r) => { const n = oneOf(r, [300, 400, 500, 600]); return { text: `SCORE ${n} IN ONE RUN`, target: n, metric: 'bestScore', best: true }; },
+    (r) => { const n = oneOf(r, [1000, 1500, 2000]); return { text: `SCORE ${n} POINTS IN TOTAL`, target: n, metric: 'sumScore' }; },
+    (r) => { const n = oneOf(r, [15, 20, 25]); return { text: `FLY PAST ${n} AIRCRAFT`, target: n, metric: 'passed' }; },
+    (r) => { const ty = oneOf(r, Object.keys(TYPE_PLURAL)), n = oneOf(r, [3, 4, 5]); return { text: `FLY PAST ${n} ${TYPE_PLURAL[ty]}`, target: n, metric: 'type:' + ty }; },
+    (r) => { const n = oneOf(r, [2, 3]); return { text: `FLY PAST ${n} LANDMARKS`, target: n, metric: 'landmarks' }; },
+    (r) => { const lm = oneOf(r, Object.keys(LANDMARKS)); return { text: `FLY PAST THE ${LANDMARKS[lm]}`, target: 1, metric: 'lm:' + lm }; },
+    () => ({ text: 'FLY INTO THE NIGHT TWICE', target: 2, metric: 'nightfalls' }),
+    (r) => { const n = oneOf(r, [250, 300]); return { text: `SCORE ${n} WITHOUT RUNNING OUT OF FUEL`, target: n, metric: 'cleanScore', best: true }; },
+    (r) => { const n = oneOf(r, [5, 8]); return { text: `PLAY ${n} RUNS`, target: n, metric: 'runs' }; },
+  ];
+  let daily = null;
+  function dailyToday() {
+    const key = dayKey();
+    if (daily && daily.date === key) return daily;
+    const r = seeded('skyline-glide-' + key), pool = DAILY_POOL.map((_, i) => i), picks = [];
+    while (picks.length < 3) picks.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+    const tasks = picks.map((i) => DAILY_POOL[i](r));
+    let saved = {};
+    try { saved = JSON.parse(store.get('skyline-glide-daily')) || {}; } catch (e) { saved = {}; }
+    const same = saved.date === key && Array.isArray(saved.prog) && Array.isArray(saved.done);
+    daily = { date: key, tasks, prog: same ? saved.prog : [0, 0, 0], done: same ? saved.done : [false, false, false] };
+    return daily;
+  }
+  function dailyProgress(metric, value, best) {
+    const d = dailyToday();
+    let changed = false;
+    d.tasks.forEach((task, i) => {
+      if (task.metric !== metric || d.done[i]) return;
+      const next = Math.min(task.target, best ? Math.max(d.prog[i], value) : d.prog[i] + value);
+      if (next === d.prog[i]) return;
+      d.prog[i] = next; changed = true;
+      if (next >= task.target) {
+        d.done[i] = true; stats.dailyDone++;
+        toast(`DAILY CHALLENGE DONE · ${task.text}`, 'gold');
+        if (d.done.every(Boolean)) { stats.dailySweeps++; toast('ALL 3 DAILY CHALLENGES DONE!', 'gold'); }
+        saveStats(); checkAchievements();
+      }
+    });
+    if (changed) store.set('skyline-glide-daily', JSON.stringify({ date: d.date, prog: d.prog, done: d.done }));
+  }
+
+  // events from the game
+  function onPass(id) {
+    if (!run) return;
+    run.passed++;
+    stats.types[id] = (stats.types[id] || 0) + 1;
+    dailyProgress('passed', 1); dailyProgress('type:' + id, 1);
+    checkAchievements();
+  }
+  function onLandmark(lm) {
+    stats.landmarks[lm] = (stats.landmarks[lm] || 0) + 1;
+    dailyProgress('landmarks', 1); dailyProgress('lm:' + lm, 1);
+    saveStats(); checkAchievements();
+  }
+  function onDayChange(night) {
+    if (night) { stats.nightfalls++; dailyProgress('nightfalls', 1); } else stats.sunrises++;
+    saveStats(); checkAchievements();
+  }
+  function onFuelOut() {
+    if (!run) return;
+    run.fuelOuts++;
+    if (run.fuelOutAt == null) run.fuelOutAt = elapsed;
+  }
+  function runProgress() {
+    if (!run) return;
+    if (run.fuelOuts === 0) run.clean = score;
+    if (run.fuelOutAt != null && !run.deadstick && elapsed - run.fuelOutAt >= 5) run.deadstick = true;
+    dailyProgress('bestScore', score, true);
+    dailyProgress('cleanScore', run.clean, true);
+    checkAchievements();
+  }
+  function onRunEnd(final) {
+    if (!run) return;
+    if (run.fuelOuts === 0) run.clean = final;
+    stats.runs++; stats.total += final; saveStats();
+    dailyProgress('runs', 1); dailyProgress('sumScore', final);
+    dailyProgress('bestScore', final, true); dailyProgress('cleanScore', run.clean, true);
+    checkAchievements();
+  }
+
+  // ---------- tabs: top 10, daily, awards ----------
+  const TABS = ['board', 'daily', 'awards'];
+  let activeTab = 'board';
+  function setTab(name) {
+    activeTab = name;
+    for (const n of TABS) { $('tab-' + n).setAttribute('aria-selected', String(n === name)); $('pane-' + n).hidden = n !== name; }
+    renderTabs();
+  }
+  for (const n of TABS) $('tab-' + n).addEventListener('click', () => setTab(n));
+  function renderTabs() {
+    const d = dailyToday(), gotN = ACHIEVEMENTS.filter((a) => stats.got[a.id]).length;
+    $('dailyCount').textContent = `${d.done.filter(Boolean).length}/3`;
+    $('awardCount').textContent = `${gotN}/${ACHIEVEMENTS.length}`;
+    if (activeTab === 'daily') renderDaily(d);
+    if (activeTab === 'awards') renderAwards(gotN);
+  }
+  function renderDaily(d) {
+    const list = $('dailyList');
+    list.textContent = '';
+    d.tasks.forEach((task, i) => {
+      const li = document.createElement('li');
+      if (d.done[i]) li.className = 'done';
+      const row = document.createElement('div'); row.className = 'drow';
+      const txt = document.createElement('span'); txt.textContent = task.text;
+      const num = document.createElement('span'); num.textContent = d.done[i] ? 'DONE' : `${d.prog[i]}/${task.target}`;
+      row.append(txt, num);
+      const bar = document.createElement('div'); bar.className = 'bar';
+      const fillEl = document.createElement('i'); fillEl.style.width = `${Math.round(d.prog[i] / task.target * 100)}%`;
+      bar.appendChild(fillEl);
+      li.append(row, bar);
+      list.appendChild(li);
+    });
+    const now = new Date(), midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const mins = Math.max(1, Math.ceil((midnight - now) / 60000));
+    $('dailyReset').textContent = `NEW IN ${Math.floor(mins / 60)}H ${mins % 60}M`;
+  }
+  function renderAwards(gotN) {
+    $('awardsTotal').textContent = `${gotN}/${ACHIEVEMENTS.length} EARNED`;
+    const list = $('awardList');
+    list.textContent = '';
+    for (const a of ACHIEVEMENTS) {
+      const li = document.createElement('li');
+      if (stats.got[a.id]) li.className = 'got';
+      const box = document.createElement('span'); box.className = 'box';
+      const body = document.createElement('div');
+      const nm = document.createElement('div'); nm.textContent = a.name;
+      const ds = document.createElement('div'); ds.className = 'desc'; ds.textContent = a.desc;
+      body.append(nm, ds);
+      li.append(box, body);
+      list.appendChild(li);
+    }
+  }
+
   // ---------- game flow ----------
   function reset() {
     clusters = []; enemies = []; puffs = []; trail = [];
@@ -1314,13 +1755,14 @@
     if (fuelOut) { sfx.sputter(); return; }
     player.vy = Math.min(player.vy, -270 * k);
     fuel -= FUEL.tap;
-    if (fuel <= 0) { fuel = 0; fuelOut = true; }
+    if (fuel <= 0) { fuel = 0; fuelOut = true; onFuelOut(); }
     sfx.flap();
   }
   function launch() {
     viewIdx = PLANES.indexOf(choice.plane);
     // ask the server for this run's token; the score can only be saved against it
     currentRun = Board.mode === 'remote' ? rpc('start_run').catch(() => null) : null;
+    run = newRun();
     audio(); reset(); start(); flap();
   }
   function press() {
@@ -1338,7 +1780,7 @@
     hint.hidden = !portrait;
     fuelEl.hidden = true;
     overlay.hidden = false;
-    renderHangar(); renderBoard();
+    renderHangar(); renderBoard(); setTab(activeTab);
   }
   function showOver() {
     ovTitle.textContent = 'GAME OVER';
@@ -1350,6 +1792,7 @@
     fuelEl.hidden = true;
     overlay.hidden = false;
     showBoardAfterRun(score);
+    renderTabs();
   }
   flyBtn.addEventListener('click', () => { if (state !== 'playing') launch(); });
   homeBtn.addEventListener('click', showHome);
@@ -1364,6 +1807,7 @@
     const before = bestEver();
     if (score > hi) { hi = score; store.set('skyline-glide-hi', String(hi)); }
     hiEl.textContent = 'HI ' + pad(hi);
+    onRunEnd(score);
     const fresh = PLANES.filter((p) => p.unlock > before && p.unlock <= score);
     const unlockMsg = $('unlockMsg');
     unlockMsg.hidden = !fresh.length;
@@ -1385,8 +1829,7 @@
     let minTop = groundY;
     for (const c of clusters) {
       if (c.x < ex + 60 && c.x + c.width > -10) {
-        const hB = c.hf * playH;
-        minTop = Math.min(minTop, groundY - hB - ornUnit(hB) * 1.6);
+        for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, towerTop(c, tw))) minTop = Math.min(minTop, r[1]);
       }
     }
     const yMin = 20 + m.top * sc + tr.wobble;
@@ -1401,6 +1844,7 @@
 
   function update(dt) {
     t += dt;
+    updateToast(dt);
     nightMix += clamp(nightTarget - nightMix, -dt * 0.5, dt * 0.5);
     updatePalette(nightMix);
     const worldSpeed = state === 'playing' ? speed : state === 'ready' ? 60 : 0;
@@ -1433,13 +1877,15 @@
     speed = Math.min(baseSpeed() + elapsed * 3.2, portrait ? 300 : 380);
     dist += speed * dt;
     score = Math.floor(dist * 0.055);
+    progTimer -= dt;
+    if (progTimer <= 0) { progTimer = 0.5; runProgress(); }
 
     const g = 980 * k;
     const thrusting = holding() && !fuelOut;
     if (thrusting) {
       player.vy = Math.max(player.vy + (g - 2100 * k) * dt, -320 * k);
       fuel -= FUEL.burn * dt;
-      if (fuel <= 0) { fuel = 0; fuelOut = true; sfx.sputter(); }
+      if (fuel <= 0) { fuel = 0; fuelOut = true; sfx.sputter(); onFuelOut(); }
     } else {
       player.vy = Math.min(player.vy + g * dt, 460 * k);
       fuel = Math.min(1, fuel + FUEL.regen * dt);
@@ -1452,10 +1898,16 @@
 
     for (const c of clusters) c.x -= speed * dt;
     clusters = clusters.filter((c) => c.x + c.width > -20);
+    for (const c of clusters) {
+      if (!c.lm) continue;
+      if (!c.announced && c.x < W - 30) { c.announced = true; toast(`LANDMARK · ${LANDMARKS[c.lm]}`); }
+      if (!c.passed && c.x + c.width < px - 30) { c.passed = true; onLandmark(c.lm); }
+    }
     spawnCursor -= speed * dt;
     // Towers are generated well past the right edge so oncoming traffic always knows what it will cross.
     while (spawnCursor < W + 800) {
-      const c = makeCluster(spawnCursor, diff);
+      const c = sinceLandmark >= 4 && Math.random() < 0.2 ? makeLandmark(spawnCursor, diff) : makeCluster(spawnCursor, diff);
+      sinceLandmark = c.lm ? 0 : sinceLandmark + 1;
       clusters.push(c);
       spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1);
     }
@@ -1467,6 +1919,7 @@
       e.base = clamp(e.base, e.yMin, e.yMax);
       e.y = e.base + Math.sin(t * 2.2 + e.seed) * e.tr.wobble;
     }
+    for (const e of enemies) if (!e.passed && e.x < px - 40) { e.passed = true; onPass(e.tr.id); }
     enemies = enemies.filter((e) => e.x > -80);
     enemyTimer -= dt;
     if (enemyTimer <= 0 && elapsed > 3) trySpawnEnemy(diff);
@@ -1479,7 +1932,7 @@
     }
 
     if (score >= lastMilestone + 100) { lastMilestone = Math.floor(score / 100) * 100; blinkScore(); sfx.point(); }
-    if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; }
+    if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; onDayChange(nightTarget === 1); }
 
     // collisions
     const sh = playerShape();
@@ -1487,8 +1940,7 @@
     for (const p of poly) if (p[1] >= groundY) return crash();
     for (const c of clusters) {
       if (c.x > px + 50 || c.x + c.width < px - 50) continue;
-      const y0 = groundY - c.hf * playH;
-      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) if (polyHitsRect(poly, r)) return crash();
+      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, towerTop(c, tw))) if (polyHitsRect(poly, r)) return crash();
     }
     for (const e of enemies) {
       if (Math.abs(e.x - px) > 75 || Math.abs(e.y - player.y) > 45) continue;
@@ -1559,8 +2011,7 @@
 
     for (const c of clusters) {
       if (c.x > W + 10 || c.x + c.width < -10) continue;
-      const y0 = groundY - c.hf * playH;
-      for (const tw of c.towers) drawTower(tw, c.x + tw.dx, y0);
+      for (const tw of c.towers) drawTower(tw, c.x + tw.dx, towerTop(c, tw));
     }
 
     for (const e of enemies) {

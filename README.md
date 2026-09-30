@@ -8,6 +8,14 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops, water tanks, billboards, lobbies and blinking aviation beacons. Windows catch a sweeping glint by day and flicker on and off at night.
 - Ten kinds of oncoming traffic join as your score climbs, each faster or more aggressive: biplanes and blimps (0), light planes (100), helicopters (200), vintage propliners (300), WWII fighters (450), regional jets (600), widebody airliners (800), supersonic jets (1000) and fighter jets that chase your altitude (1200). A red chevron on the right edge warns you before fast ones arrive.
 - Day and night swap every 500 points.
+- **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in:
+  - Twin Towers
+  - a stadium with floodlights and a crowd
+  - a TV tower
+  - a clock tower that shows the real time
+  - a pyramid tower
+- **Daily challenges:** three a day, the same for everyone on a given date, picked from nine kinds. Examples: "Fly past 4 helicopters", "Score 300 without running out of fuel", "Fly past the stadium". They reset at local midnight and are tracked on the **Daily** tab.
+- **Achievements:** 21 of them, from *First flight* to *Grand tour* (all five landmarks), *Plane spotter* (all ten opponent types) and *Dead stick* (stay airborne 5 seconds with an empty tank). They pop up as you earn them and are listed on the **Awards** tab. Progress is saved on the device.
 
 `src/game.html` is the source. Run `./build.sh` to regenerate the standalone `index.html`, which you can open directly or serve from any static host.
 
