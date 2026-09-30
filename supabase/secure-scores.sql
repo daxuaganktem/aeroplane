@@ -106,9 +106,10 @@ begin
     raise exception 'run_expired' using errcode = 'P0001';
   end if;
 
-  -- At top speed the game awards about 21 points a second; allow a little slack for network delay.
+  -- The speed steps up every 500 points until 10,000, where the game awards about 44 points a second;
+  -- a whole run averages well under that. Allow a little slack for network delay.
   v_secs := extract(epoch from (now() - v_run.started_at));
-  if p_score > 22 * v_secs + 20 then
+  if p_score > 45 * v_secs + 20 then
     raise exception 'implausible' using errcode = 'P0001';
   end if;
 

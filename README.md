@@ -6,7 +6,10 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
 - **Tap** anywhere to climb, **hold** to keep climbing (Space / ↑ on desktop).
 - **Fuel:** taps sip fuel, holding burns it fast, and it refills while you're off the throttle. Run dry and the engine cuts out until the tank is back to a quarter.
 - Towers rise from the ground in clusters of 2–4 buildings of equal height, with varied rooftops, water tanks, billboards, lobbies and blinking aviation beacons. Windows catch a sweeping glint by day and flicker on and off at night.
-- Ten kinds of oncoming traffic join as your score climbs, each faster or more aggressive: biplanes and blimps (0), light planes (100), helicopters (200), vintage propliners (300), WWII fighters (450), regional jets (600), widebody airliners (800), supersonic jets (1000) and fighter jets that chase your altitude (1200). A red chevron on the right edge warns you before fast ones arrive.
+- **Speed** steps up every 500 points (a *SPEED UP* banner shows the new pace): +30% of the starting speed per step up to 4,000, then +10% per step until 10,000. Tower gaps widen a little at high speed so there's still time to react.
+- **Tapping a lot calls in more traffic:** every 60 taps in a run (up to 6 levels) brings oncoming aircraft sooner, packs tower clusters closer and makes the city a little harder, with a *MORE TRAFFIC AHEAD* banner.
+- Nineteen kinds of oncoming traffic join as your score climbs, each faster or more aggressive: hot-air balloons, biplanes and blimps (0), light planes (100), gliders (150), helicopters (200), turboprops (250), vintage propliners (300), camera drones that bob toward you (350), WWII fighters (450), business jets (550), regional jets (600), a grinning Beluga-style cargo jet (750), widebody airliners (800), jumbo jets (950), supersonic jets (1000), fighter jets that chase your altitude (1200) and stealth bombers (1600). A red chevron on the right edge warns you before fast ones arrive.
+- **Laser interceptors (from 2,000):** a red laser and target reticle lock onto your altitude for a second while it beeps, freeze (*LOCKED*), and then a jet streaks along the line far faster than anything else. Move off the line! They come more often every 500 points past 2,000, and all traffic arrives 25% more often past 2,000.
 - Day and night swap every 500 points.
 - **Landmarks** sometimes replace a normal cluster, each announced with a banner as it scrolls in. The Twin Towers also appear in every run, reaching the plane at about 1,000 points (set in `GUARANTEED` in `src/game.html`). The landmarks are:
   - Twin Towers
@@ -15,7 +18,7 @@ A one-button, mobile-first browser game: fly a little airliner over city tower c
   - a clock tower that shows the real time
   - a pyramid tower
 - **Daily challenges:** three a day, the same for everyone on a given date, picked from nine kinds. Examples: "Fly past 4 helicopters", "Score 300 without running out of fuel", "Fly past the stadium". They reset at local midnight and are tracked on the **Daily** tab.
-- **Achievements:** 21 of them, from *First flight* to *Grand tour* (all five landmarks), *Plane spotter* (all ten opponent types) and *Dead stick* (stay airborne 5 seconds with an empty tank). They pop up as you earn them and are listed on the **Awards** tab. Progress is saved on the device.
+- **Achievements:** 22 of them, from *First flight* to *Grand tour* (all five landmarks), *Plane spotter* (every opponent type), *Lock breaker* (dodge a laser interceptor) and *Dead stick* (stay airborne 5 seconds with an empty tank). They pop up as you earn them and are listed on the **Awards** tab. Progress is saved on the device.
 
 `src/game.html` is the source. Run `./build.sh` to regenerate the standalone `index.html` (and the `www/` folder the phone apps bundle). You can open it directly or serve it from any static host.
 
@@ -60,7 +63,7 @@ The publishable key is meant to be public. The policies above allow reading and 
 - **`start_run()`**: the game calls it when a run begins and gets a single-use token. The server records the start time and the caller's IP.
 - **`submit_score(run, name, score)`**: rejects the score if any of these apply:
   - the token is unknown, already used, or older than 2 hours
-  - the score is faster than the game allows: top speed caps scoring at about 21 points a second, so the server checks it against the real time since `start_run`
+  - the score is faster than the game allows: top speed (reached at 10,000 points) caps scoring at about 44 points a second, so the server checks it against the real time since `start_run`
   - the name is empty after clean-up
 
 **Rate limits and cleanup:**

@@ -483,6 +483,7 @@
   // Now and then a famous-shaped cluster replaces an ordinary one.
   const LANDMARKS = { twin: 'TWIN TOWERS', stadium: 'STADIUM', tvtower: 'TV TOWER', clock: 'CLOCK TOWER', pyramid: 'PYRAMID TOWER' };
   let lastLandmark = '', sinceLandmark = 0;
+  let locks = [], laserTimer = 0, speedTier = 0, tapLevel = 0;
   const baseTower = (extra) => Object.assign({ dx: 0, w: 40, shape: 'block', extra: 'none', shade: randi(0, 2), o: 1,
     seed: randi(1, 1e9), style: 0, awning: pick(AWNINGS), beacon: true }, extra);
   // Landmarks that always turn up in a run, timed to reach the player at this score.
@@ -862,60 +863,7 @@
       top: 22, bottom: 12,
       hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
             [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [1, 11.2], [12, 11.2], [12, 6], [21, 5.5]] },
-    blimp: { sc: 1,
-      fin: P2('M-20 -7.5 L-29 -15 L-33 -15 L-30 -3 Z'), lowerFin: P2('M-20 7.5 L-29 15 L-33 15 L-30 3 Z'),
-      under: P2('M-6 9.5 L8 9.5 L7 14 L-4 14 Z'),
-      body: P2('M-30 0 C-30 -8.5 -15 -11 0 -11 C18 -11 30 -7 30 0 C30 7 18 11 0 11 C-15 11 -30 8.5 -30 0 Z'),
-      shadeY: 3.5, bellyY: null, band: [-2.2, 1],
-      windows: [{ x0: -3.5, x1: 6, step: 2.4, y: 10.8, w: 1.3, h: 1.4 }],
-      top: 15, bottom: 15,
-      hit: [[30, 0], [22, -8.5], [0, -11], [-20, -7.5], [-29, -15], [-33, -15], [-30, 0], [-33, 15], [-29, 15], [-20, 7.5],
-            [-6, 10], [-4, 14], [7, 14], [8, 10.5], [22, 8.5]] },
-    helicopter: { sc: 1,
-      fin: P2('M-21 -2.6 L-25 -9 L-27 -9 L-26 -1.5 Z'), finEdge: P2('M-27 -9 L-26 -9 L-25.2 -1.8 L-26 -1.5 Z'),
-      body: P2('M-4 -5 C3 -6.5 10 -5 12 -1 C13 2 11 5 5 5.5 L-4 5.5 C-7 5 -8 3 -8 0 L-24 -1 L-24 -3 L-8 -3.5 C-7 -4.6 -6 -5 -4 -5 Z'),
-      shadeY: 1.5, bellyY: 3.8,
-      glass: [P2('M4.5 -4.9 C9 -4.6 11.5 -2 11.9 0.6 L5.5 0.6 Z')],
-      doors: [[-2.5, -3.6, 3.2, 6]],
-      skids: [[-7, 8.6, 10, 8.6], [-3, 5.4, -4, 8.6], [6, 5.4, 7, 8.6], [10, 8.6, 12, 7.2]],
-      tailRotor: [-25, -5, 3.6], rotor: [0, -7.8, 22],
-      top: 9, bottom: 9,
-      hit: [[12, -1], [5, -6], [22, -7.2], [22, -8.6], [-22, -8.6], [-22, -7.2], [-4, -5.5], [-8, -3.5], [-24, -3],
-            [-25, -9], [-27, -9], [-27, -1], [-8, 0], [-7, 8.6], [12, 8.6], [11, 4]] },
-    propliner: { sc: 0.95,
-      fin: P2('M-16 -4.5 C-19 -9 -21 -15 -25 -15.5 L-27.5 -14.5 L-27 -4.5 Z'), finEdge: P2('M-27.5 -14.5 L-26 -15.2 L-25.6 -4.5 L-27 -4.5 Z'),
-      body: P2('M-28 -4 L12 -5 C21 -5 25 -2 25 0.5 C25 3 21 5 12 5 L-14 5 C-20 5 -24 2 -28.5 -1 Z'),
-      shadeY: 1.6, bellyY: 3.6,
-      windows: [{ x0: -14, x1: 10, step: 4, y: -3, w: 2, h: 2 }],
-      doors: [[-19.2, -3.6, 2.4, 5]],
-      cockpit: P2('M18 -3.6 L22 -2.6 L23.4 -0.8 L18.5 -1 Z'),
-      tailplane: P2('M-18 -1.5 L-28.5 -4.5 L-29.5 -2.3 L-21 1 Z'),
-      wing: P2('M4 2.5 L-4 9.5 L-10 9.5 L-6 2.5 Z'), wingTop: P2('M4 2.5 L-3.8 8.7 L-7.6 8.7 L-4.4 2.5 Z'),
-      nacelles: [[-2, 3.8, 11.5, 4.6]], props: [[10.8, 6.1, 7.5]],
-      fixedGear: [[-23, 1.8, 1.4]],
-      top: 16, bottom: 13.5,
-      hit: [[25, 0.5], [20, -4.5], [-16, -4.5], [-24, -15.5], [-27.5, -14.5], [-27.5, -4], [-29.5, -2.3], [-21, 1],
-            [-14, 5], [-10, 9.5], [-4, 9.5], [-2, 8.4], [10.8, 13.6], [11.8, -1.4], [20, 4.5]] },
-    spitfire: { sc: 1, bodyFill: 'liv',
-      fin: P2('M-15 -2.5 Q-17 -9.5 -20 -9.5 Q-21.5 -9 -21.5 -1 Z'),
-      body: P2('M-21.5 -1.8 L6 -3.8 L13 -3.2 Q15.5 -2.8 16 0 Q15.5 2.8 13 3.2 L4 3.8 L-21.5 1 Z'),
-      shadeY: 1.2, bellyY: null,
-      canopy: P2('M-3.2 -3.5 Q0.5 -7.2 4.8 -3.8 Z'),
-      tailplane: P2('M-16 0 L-23 -1.5 L-23 1.3 Z'),
-      wing: P2('M6 1.5 Q2 6.5 -8 6.5 L-9 6 L-2 1.5 Z'), wingTop: P2('M6 1.5 Q1.8 5.6 -7.2 5.7 L-3 1.5 Z'),
-      roundel: [-9, -0.2, 2.1],
-      spinner: P2('M15.6 -2 L18.4 0 L15.6 2 Z'), noseProp: [17, 0, 8],
-      fixedGear: [[-19.5, 1.5, 1.2]],
-      top: 10, bottom: 8,
-      hit: [[17, -8], [17, 8], [6, 6.5], [-8, 6.5], [-21.5, 1], [-23, 1.3], [-23, -1.5], [-20, -9.5], [-15, -3],
-            [-3, -3.6], [1, -6.4], [5, -3.8], [13, -3.2]] },
   };
-  // Seaplane: the light plane on floats. Widebody: the airliner with a much bigger engine.
-  CRAFT.widebody = Object.assign({}, CRAFT.airliner, {
-    engines: [[-1.5, 6.4, 14, 6]], bottom: 13,
-    hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
-          [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [-1.5, 12.4], [12.5, 12.4], [12.5, 6], [21, 5.5]] });
-
   // Redrawn from the art references in docs/player-plane-image-prompt.md: slim white bodies with a thin
   // livery cheatline over a grey belly, rounded windows, outlined doors and livery details.
   // extras: extra shapes { p: path, f: fill, s: outline (true = soft grey), w: line width, layer: back | mid | front }.
@@ -1075,6 +1023,21 @@
           [-27.3, -3], [-30.7, -2.5], [-29.5, -1.2], [-25, 1.4], [-8.4, 1.6], [-6.4, 3.8], [-5, 4.3], [3.4, 5.1], [4.8, 5.6],
           [10.3, 5.7], [11.4, 4.2], [10.2, 2.9], [28.5, 3.1]] };
 
+  CRAFT.widebody = Object.assign({}, CRAFT.jumbo, {
+    body: P2('M-28.8 -2.9 L-12 -3.8 L24 -3.8 C28 -3.6 30.6 -2 31.6 0.3 C31.8 1.8 30.5 2.8 28.5 3.1 C22 3.5 10 3.6 0 3.6 C-12 3.4 -20 2.8 -25 1.4 C-27.5 0.6 -28.8 -0.8 -29.2 -1.6 Z'),
+    shadePath: P2('M-31 0.5 L32 1.2 L32 6 L-31 6 Z'), cheatPath: P2('M-31 0 L32 0.7 L32 1.2 L-31 0.5 Z'),
+    windows: [{ x0: -8, x1: 8.6, step: 1.05, y: -1.3, w: 0.55, h: 0.62, r: 0.15, f: 'winGray' },
+              { x0: 11.8, x1: 22.2, step: 1.05, y: -1.3, w: 0.55, h: 0.62, r: 0.15, f: 'winGray' }],
+    doors: [[-10.5, -2.3, 1.25, 2.3], [9.8, -2.3, 1.25, 2.3], [23.5, -2.3, 1.25, 2.3]],
+    cockpit: P2('M26.8 -2.6 C27.8 -2.8 29 -2.5 29.8 -1.5 L26.8 -1.5 Z'),
+    extras: [{ p: P2('M-16.6 -2.4 L-14.7 -2.4 L-13.8 -0.8 L-15.2 -0.9 Z'), f: 'liv', layer: 'front' },
+             { p: P2('M-2.6 2.2 L-0.8 1.6 L-0.8 5.4 L-2.6 4.8 Z'), f: 'gray', s: true, layer: 'front' },
+             { p: P2('M-0.8 1.3 L7.5 1.3 C8.3 1.3 8.6 2.5 8.6 3.5 C8.6 4.6 8.3 5.7 7.5 5.7 L-0.8 5.7 Z'), f: 'liv', s: true, layer: 'front' },
+             { p: P2('M7.5 1.35 C8.8 1.35 9.1 2.5 9.1 3.5 C9.1 4.6 8.8 5.65 7.5 5.65 C8 4.6 8 2.4 7.5 1.35 Z'), f: 'char', layer: 'front' }],
+    gear: [[-3, 3.5], [-1, 3.6], [26, 3.1]], bottom: 5.9,
+    hit: [[31.6, 0.3], [28, -3.3], [24, -3.8], [-12, -3.8], [-17.9, -4.6], [-25.1, -13.2], [-28.6, -13.2], [-27.3, -3], [-30.7, -2.5],
+          [-29.5, -1.2], [-25, 1.4], [-8.4, 1.6], [-2.6, 4.8], [-0.8, 5.9], [7.5, 5.9], [9.1, 3.5], [8.6, 2.8], [28.5, 3.1]] });
+
   CRAFT.concorde = { sc: 0.95,
     fin: P2('M-29.3 -8.1 L-26.3 -8.1 C-24 -5.6 -22 -3.8 -20.4 -2.7 C-19.5 -2 -18.7 -1.7 -17.9 -1.6 L-27.3 -1.1 Z'),
     finEdge: P2('M-29.3 -8.1 L-28.4 -8.1 L-26.5 -1.1 L-27.3 -1.1 Z'),
@@ -1116,6 +1079,166 @@
     hit: [[28.6, 0.7], [22.9, -1.1], [20, -1.7], [16.2, -3.4], [13.2, -4.6], [9.2, -2.8], [-8.2, -2.5], [-13.75, -4.3],
           [-21.3, -11.8], [-25.9, -12.3], [-22.5, -3.9], [-23.9, -3.9], [-24.1, -1.5], [-24, 1.9], [-12.8, 4.3], [-9.3, 4.5],
           [-8.9, 3.2], [2.3, 3.8], [13.1, 3.8], [13.1, 1.6], [22.9, 2]] };
+
+  // Oncoming traffic only (never in the hangar), drawn in the same style.
+  CRAFT.balloon = { sc: 1, bodyFill: 'white',
+    body: P2('M0 -21 C9 -21 15 -14 15 -6 C15 2 8 7 4 11 L-4 11 C-8 7 -15 2 -15 -6 C-15 -14 -9 -21 0 -21 Z'),
+    shadePath: P2('M-16 2.5 L16 2.5 L16 12 L-16 12 Z'),
+    cheatPath: P2('M-10 -20 C-14 -12 -11 2 -3.2 11 L-0.8 11 C-6.5 2 -8 -12 -5.5 -21 Z M5.5 -21 C8 -12 6.5 2 0.8 11 L3.2 11 C11 2 14 -12 10 -20 Z M-16 -7 L16 -7 L16 -5 L-16 -5 Z'),
+    extras: [{ p: P2('M11.5 -15 C13 -12 13.6 -8 13 -4 C12 -8 11.8 -12 10 -16.5 Z'), f: 'white', layer: 'mid' },
+             { p: P2('M-4 11 L4 11 L3 12.6 L-3 12.6 Z'), f: 'dark', s: true, layer: 'mid' },
+             { p: P2('M-2.8 12.6 L-2.5 15.2 M2.8 12.6 L2.5 15.2 M0 12.6 L0 15.2'), s: 'char', w: 0.3, layer: 'mid' },
+             { p: P2('M-3.2 15.2 L3.2 15.2 L2.7 19 L-2.7 19 Z'), f: '#a8733f', s: true, layer: 'front' },
+             { p: P2('M-3.4 14.8 h6.8 v0.9 h-6.8 Z M-2.9 17 h5.8 v0.35 h-5.8 Z'), f: '#6e4a2a', layer: 'front' }],
+    top: 21, bottom: 19,
+    hit: [[0, -21], [11, -18], [15, -6], [12, 3], [4, 11], [3.2, 19], [-3.2, 19], [-4, 11], [-12, 3], [-15, -6], [-11, -18]] };
+
+  CRAFT.glider = { sc: 1.15,
+    fin: P2('M-27.8 -1 L-26.5 -9.5 L-23.2 -9.5 L-20.5 -1.4 Z'),
+    finEdge: P2('M-27.8 -1 L-26.5 -9.5 L-25.4 -9.5 L-26.5 -1.05 Z'),
+    tailplane: P2('M-29.5 -9.6 C-27 -10.2 -23 -10.2 -21.5 -9.7 C-22 -9.1 -27 -9 -29.5 -9.6 Z'),
+    body: P2('M-28 -1.2 L-10 -1.6 C0 -2.2 8 -3 13 -2.8 C17 -2.6 20 -1.2 21 0.4 C20.5 1.8 18 2.4 13 2.4 C5 2.3 -8 1 -28 0.2 Z'),
+    shadePath: P2('M-30 0.35 L22 0.85 L22 5 L-30 5 Z'), cheatPath: P2('M-30 -0.15 L22 0.35 L22 0.85 L-30 0.35 Z'),
+    canopy: P2('M7.6 -2.7 C9.5 -5 15 -5 18.6 -2 Z'),
+    extras: [{ p: P2('M-1 -1.9 L1.8 -6.6 L5.2 -6.7 L6.6 -2.1 Z'), f: 'wingShade', s: true, layer: 'back' },
+             { p: P2('M-2.5 -2.1 L7.2 -2.5 C7.9 -2.3 7.9 -1.5 7.2 -1.3 L-2.5 -1.1 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M11 -4.4 L13.4 -4.6 L12.8 -4 L11.2 -3.9 Z'), f: 'white', layer: 'mid' },
+             { p: P2('M5.3 2.9 A1.2 1.2 0 1 1 2.9 2.9 A1.2 1.2 0 1 1 5.3 2.9 Z'), f: 'tyre', layer: 'back' }],
+    top: 10.2, bottom: 4.2,
+    hit: [[21, 0.4], [18.6, -2], [13, -5], [7.6, -2.8], [5.2, -6.7], [1.8, -6.6], [-1, -2], [-20.5, -1.4], [-21.5, -9.7],
+          [-29.5, -9.6], [-27.8, -1], [-28, 0.2], [-8, 1], [2.9, 4.1], [5.3, 4.1], [13, 2.4]] };
+
+  CRAFT.drone = { sc: 1.15,
+    body: P2('M-7 -2 C-7 -3.5 -5.5 -4 -4 -4 L4 -4 C5.5 -4 7 -3.5 7 -2 L7 1.5 C7 2.6 6 3 5 3 L-5 3 C-6 3 -7 2.6 -7 1.5 Z'),
+    shadePath: P2('M-8 0.5 h16 v4 h-16 Z'), cheatPath: P2('M-8 -0.6 h16 v1.1 h-16 Z'),
+    extras: [{ p: P2('M-17 -4.9 L-6 -2.9 L-6 -1.7 L-17 -3.8 Z M17 -4.9 L6 -2.9 L6 -1.7 L17 -3.8 Z'), f: 'char', layer: 'back' },
+             { p: P2('M-18.4 -6.6 h2.8 v3.1 h-2.8 Z M15.6 -6.6 h2.8 v3.1 h-2.8 Z'), f: 'liv', s: true, layer: 'mid' },
+             { p: P2('M-2.2 -2.9 h4.4 v1.4 h-4.4 Z'), f: 'winGray', layer: 'mid' },
+             { p: P2('M-1.2 3 h2.4 v1.2 h-2.4 Z'), f: 'char', layer: 'front' },
+             { p: P2('M1.9 5.4 A1.9 1.9 0 1 1 -1.9 5.4 A1.9 1.9 0 1 1 1.9 5.4 Z'), f: 'char', layer: 'front' },
+             { p: P2('M1.7 5.4 A0.75 0.75 0 1 1 0.2 5.4 A0.75 0.75 0 1 1 1.7 5.4 Z'), f: 'glass', layer: 'front' }],
+    rotors: [[-17, -7.2, 6.5], [17, -7.2, 6.5]],
+    skids: [[-5.5, 3, -8, 7.4], [5.5, 3, 8, 7.4], [-10, 7.4, -6, 7.4], [6, 7.4, 10, 7.4]],
+    top: 8.4, bottom: 7.8,
+    hit: [[-23.5, -8.4], [23.5, -8.4], [23.5, -5.6], [7, -2], [7, 3], [10, 7.8], [-10, 7.8], [-7, 3], [-7, -2], [-23.5, -5.6]] };
+
+  CRAFT.cargo = { sc: 1,
+    fin: P2('M-18 -6 C-21 -9 -23 -15 -25.5 -19 L-29.8 -19 L-29.5 -3 Z'),
+    finEdge: P2('M-29.8 -19 L-28.2 -19 L-27.9 -3.2 L-29.5 -3 Z'),
+    body: P2('M-30 -3 L-20 -5 C-10 -12 8 -14.2 18 -11.2 C24 -9.2 28 -5.2 29 -1 C29.5 1.5 28 3 26 3.4 L20 4 L-12 4 C-18 3.6 -24 1.5 -30.5 -1.2 Z'),
+    shadePath: P2('M-32 1.2 L31 1.2 L31 8 L-32 8 Z'), cheatPath: P2('M-32 0.6 L31 0.6 L31 1.2 L-32 1.2 Z'),
+    cockpit: P2('M23.4 -0.9 C25 -1.4 27 -1.1 28.4 0.2 L23.8 0.3 Z'),
+    doors: [[19.6, -2.8, 1.7, 3.9]], doorHandles: true, doorWidth: 0.32,
+    tailplane: P2('M-20 -1.5 L-31.5 -4.8 L-32.2 -2.5 L-23.5 1 Z'),
+    wing: P2('M6 1.5 L-8 10 L-13 10 L-4 1.5 Z'), wingTop: P2('M6 1.5 L-7.3 9.2 L-10.4 9.2 L-1.8 1.5 Z'),
+    engines: [[-2, 5.3, 10, 4.4]],
+    extras: [{ p: P2('M-31.4 -7.2 L-29.9 -7.2 L-30.2 -1.2 L-31.8 -1.6 Z'), f: 'liv', s: true, layer: 'mid' },
+             // the grin and eyes of the real Beluga XL livery
+             { p: P2('M17.4 -7.4 A1.6 2 0 1 1 14.2 -7.4 A1.6 2 0 1 1 17.4 -7.4 Z'), f: 'char', layer: 'mid' },
+             { p: P2('M16.9 -8.2 A0.5 0.6 0 1 1 15.9 -8.2 A0.5 0.6 0 1 1 16.9 -8.2 Z'), f: 'white', layer: 'mid' },
+             { p: P2('M17.5 -3.4 Q21.5 -0.6 25.4 -4'), s: 'char', w: 0.55, layer: 'mid' },
+             { p: P2('M-8 -9.5 C0 -12.6 10 -13 16 -11.6'), s: 'shade', w: 0.4, layer: 'mid' }],
+    gear: [[-2, 4], [0, 4], [22, 4]],
+    top: 19, bottom: 10,
+    hit: [[29, -1], [24, -9], [18, -11.2], [5, -14], [-10, -12], [-20, -5], [-25.5, -19], [-29.8, -19], [-29.6, -5],
+          [-31.8, -7.2], [-32.2, -2.5], [-23.5, 1], [-12, 4], [-13, 10], [-8, 10], [-2, 9.7], [8, 9.7], [8, 5.3], [26, 3.4]] };
+
+  CRAFT.stealth = { sc: 1.1, bodyFill: '#3d434c', shadeFill: '#2c3139',
+    body: P2('M-26 1 L-14 -1.5 C-6 -4.5 2 -5.2 8 -3.6 C14 -2 20 -0.4 26 0.8 C18 1.8 8 2.5 -4 2.6 C-14 2.6 -21 2 -26 1 Z'),
+    shadePath: P2('M-28 1.1 L28 0.9 L28 4 L-28 4 Z'), cheatPath: P2('M-24 0.9 L24 0.7 L24 1.05 L-24 1.25 Z'),
+    extras: [{ p: P2('M-11 -1.2 L-20.5 -3.6 L-17.4 -3.7 L-5 -2.4 Z'), f: '#2c3139', s: true, layer: 'back' },
+             { p: P2('M-2.5 -4.5 L4.5 -4.7 L5.8 -3.9 L-2.5 -3.6 Z'), f: '#23272e', layer: 'mid' },
+             { p: P2('M9 -3.3 L13.4 -2.1 L10 -2.1 Z'), f: '#6f8299', layer: 'mid' },
+             { p: P2('M-26 1 L-23 0.3 L-23 1.6 Z'), f: '#ff7a3c', layer: 'mid' }],
+    top: 5.2, bottom: 3,
+    hit: [[26, 0.8], [14, -2], [2, -5.2], [-6, -4.5], [-11, -2.6], [-20.5, -3.7], [-26, 1], [-21, 2], [-4, 2.6], [18, 1.8]] };
+
+  CRAFT.blimp = { sc: 1,
+    fin: P2('M-21 -7.5 L-28 -14 L-32 -14 L-30.5 -2 Z'), finEdge: P2('M-32 -14 L-30.6 -14 L-29.3 -2.4 L-30.5 -2 Z'),
+    body: P2('M-30 0 C-30 -7.5 -16 -11 0 -11 C17 -11 30 -7 30 0 C30 7 17 10.5 0 10.5 C-16 10.5 -30 7.5 -30 0 Z'),
+    shadePath: P2('M-32 3.2 L32 3.2 L32 12 L-32 12 Z'), cheatPath: P2('M-32 -1.2 L32 -1.2 L32 0.5 L-32 0.5 Z'),
+    tailplane: P2('M-20 -0.3 L-32.5 -1.2 L-33 1.4 L-20 1 Z'),
+    extras: [{ p: P2('M-21 7.2 L-28 13.5 L-32 13.5 L-30.5 2 Z'), f: 'liv', s: true, layer: 'back' },
+             { p: P2('M27 -4.5 C29.5 -3 30.2 -1 30 0 C30.2 1 29.5 3 27 4.5 C28 2 28 -2 27 -4.5 Z'), f: 'shade', layer: 'mid' },
+             { p: P2('M-10 -9.8 C-2 -10.6 8 -10.6 16 -9.4'), s: 'white', w: 0.8, layer: 'mid' },
+             { p: P2('M-7 9.8 L8 9.8 C9.5 9.8 10 11 9.5 12.5 C9 13.8 8 14.2 6.5 14.2 L-5 14.2 C-6.5 14.2 -7.3 13 -7 9.8 Z'), f: 'white', s: true, layer: 'front' },
+             { p: P2('M-4.5 11 h1.4 v1.5 h-1.4 Z M-2 11 h1.4 v1.5 h-1.4 Z M0.5 11 h1.4 v1.5 h-1.4 Z M3 11 h1.4 v1.5 h-1.4 Z'), f: 'winGray', layer: 'front' },
+             { p: P2('M5.8 11 L7.8 11 C8.6 11.2 8.9 12 8.7 12.6 L5.8 12.6 Z'), f: 'cockpit', layer: 'front' },
+             { p: P2('M-10.2 11.6 L-6.6 11.6 L-6.6 13.4 L-10.2 13.4 Z'), f: 'liv', s: true, layer: 'front' }],
+    props: [[-10.6, 12.5, 2.6]],
+    top: 14, bottom: 15.1,
+    hit: [[30, 0], [22, -8.5], [0, -11], [-21, -7.5], [-28, -14], [-32, -14], [-30, -2], [-33, -1.2], [-33, 1.4], [-30, 2],
+          [-32, 13.5], [-28, 13.5], [-21, 7.2], [-10.6, 10], [-10.6, 15.1], [-6.5, 14.2], [8, 14.2], [10, 11], [22, 8]] };
+
+  CRAFT.helicopter = { sc: 1,
+    fin: P2('M-22.5 -1.8 L-25.5 -9.5 L-27.8 -9.5 L-26.8 0 L-25 -0.2 Z'),
+    finEdge: P2('M-27.8 -9.5 L-26.7 -9.5 L-25.6 -0.1 L-26.8 0 Z'),
+    body: P2('M-5 -5.2 C2 -6.2 8 -5.2 11 -2.2 C12.8 -0.3 13 2.2 11.5 3.8 C10.2 5 7.5 5.4 4 5.4 L-4 5.4 C-6.5 5.2 -8 3.8 -8.8 1.8 L-25 -0.4 L-25.2 -2.3 L-8.6 -3 C-8 -4.4 -6.8 -5 -5 -5.2 Z'),
+    shadePath: P2('M-30 1.7 L14 1.7 L14 7 L-30 7 Z'), cheatPath: P2('M-30 0.9 L14 0.9 L14 1.7 L-30 1.7 Z'),
+    glass: [P2('M5 -4.8 C8.5 -4.6 11 -2.6 12 0.4 L6 0.4 C5.3 -1 5 -3 5 -4.8 Z')],
+    doors: [[-2.8, -3.6, 4.2, 6.4]], doorHandles: true, doorWidth: 0.35,
+    tailplane: P2('M-19.5 -0.6 L-23.6 -1.2 L-23.6 0.4 L-19.5 0.2 Z'),
+    extras: [{ p: P2('M-7 -5 C-6 -7.4 4 -7.4 5 -5.3 Z'), f: 'wing', s: true, layer: 'mid' },
+             { p: P2('M-2.2 -3 h3 v2.4 h-3 Z'), f: 'winGray', layer: 'mid' },
+             { p: P2('M-11 -4.1 L-8 -4.1 L-8 -2.9 L-11 -3 Z'), f: 'char', layer: 'mid' }],
+    tailRotor: [-26.4, -5, 3.4], rotor: [0, -8.6, 22],
+    skids: [[-8, 8.8, 10, 8.8], [-4, 5.4, -5, 8.8], [5.5, 5.4, 6.5, 8.8], [10, 8.8, 12, 7.2]],
+    top: 9.8, bottom: 9,
+    hit: [[13, 1], [11, -3], [5, -6.2], [22, -8], [22, -9.4], [-22, -9.4], [-22, -8], [-6, -6], [-8.6, -3], [-25.2, -2.3],
+          [-25.5, -9.5], [-27.8, -9.5], [-26.8, 0], [-9, 1.8], [-8, 8.8], [12, 8.8], [12, 4]] };
+
+  CRAFT.propliner = { sc: 0.95,
+    fin: P2('M-15 -4 C-19 -6 -22 -12 -24.5 -14.5 C-26 -15 -27.5 -14.6 -28 -13 L-28.2 -3.2 Z'),
+    finEdge: P2('M-28 -13 C-27.5 -14.6 -26.6 -14.9 -26 -14.9 L-26.6 -3.3 L-28.2 -3.2 Z'),
+    tailplane: P2('M-19 -0.8 L-30 -2.4 C-30.6 -1.6 -30.4 -0.6 -29.6 -0.2 L-21 1.4 Z'),
+    body: P2('M-28.5 -3.2 L-14 -4.2 L14 -4.4 C20 -4.3 24.5 -2.5 26.2 0.2 C26.4 2 25 3.4 22 3.8 L12 4.4 L-10 4.2 C-17 3.6 -24 1.6 -28.8 -0.8 Z'),
+    shadePath: P2('M-30 1 L27 0.8 L27 6 L-30 6 Z'), cheatPath: P2('M-30 -0.8 L27 -1 L27 -0.1 L-30 0.1 Z'),
+    windows: [{ x0: -12, x1: 12, step: 3.4, y: -3.2, w: 1.6, h: 1.7, r: 0.5, f: 'winGray' }],
+    doors: [[-17, -3.5, 2.2, 5.6]], doorHandles: true, doorWidth: 0.35,
+    cockpit: P2('M18.8 -3.7 L22.4 -2.8 L24.1 -1.2 L19 -1.4 Z'),
+    wing: P2('M9 2 L-6 2.8 L-9 5 L9 3.8 Z'), wingTop: P2('M9 2 L-6 2.8 L-7.5 3.9 L9 2.8 Z'),
+    extras: [{ p: P2('M2 0.5 L10.5 0.4 C11.4 0.4 11.8 1.4 11.8 2.6 C11.8 3.8 11.4 4.8 10.5 4.8 L4 4.8 C1 4.8 -1 3.8 -2 2.6 C-1 1.4 0 0.6 2 0.5 Z'), f: 'liv', s: true, layer: 'front' },
+             { p: P2('M10.4 0.45 L11.8 0.55 L11.8 4.65 L10.4 4.75 Z'), f: 'steel', layer: 'front' },
+             { p: P2('M11.8 1.7 L13.6 2.6 L11.8 3.5 Z'), f: 'char', layer: 'front' },
+             { p: P2('M-4 -4.3 L0 -4.3 L-0.5 -5 L-3.5 -5 Z'), f: 'wing', s: true, layer: 'back' }],
+    props: [[12.6, 2.6, 6]],
+    fixedGear: [[-24, 1.5, 1.4]],
+    top: 15, bottom: 8.6,
+    hit: [[26.2, 0.2], [22, -3.6], [14, -4.4], [-15, -4.2], [-24.5, -14.5], [-28, -13], [-28.2, -3.2], [-30, -2.4], [-29.6, -0.2],
+          [-24, 2.9], [-10, 4.2], [-9, 5], [9, 4.8], [12.6, 8.6], [13.6, 4], [22, 3.8]] };
+
+  CRAFT.spitfire = { sc: 1, bodyFill: 'liv',
+    fin: P2('M-15.5 -2.2 C-16.5 -6.5 -18.5 -9.6 -20.6 -9.6 C-22 -9.4 -22.4 -7 -22.2 -1.6 Z'),
+    finEdge: P2('M-20.6 -9.6 C-22 -9.4 -22.4 -7 -22.2 -1.6 L-21.2 -1.7 C-21.4 -6 -21.2 -8.6 -20.6 -9.6 Z'),
+    body: P2('M-22 -1.8 L-8 -2.6 L6 -3.6 L14 -3.4 C15.8 -3.2 16.6 -1.8 16.8 0 C16.6 1.8 15.8 3 14 3.2 L4 3.6 C-6 3.2 -15 2 -22 1 Z'),
+    shadePath: P2('M-24 0.7 L18 0.7 L18 6 L-24 6 Z'),
+    canopy: P2('M-3.6 -3.2 C-2.5 -6.4 3 -6.8 5.6 -3.7 Z'),
+    tailplane: P2('M-16 0.2 L-24 -0.8 C-24.6 0 -24.4 1 -23.6 1.3 Z'),
+    wing: P2('M7 1.2 C4 5.5 -3 6.4 -9 6.2 L-9.8 5.6 L-1 1.2 Z'), wingTop: P2('M7 1.2 C3.8 4.8 -3 5.6 -8 5.5 L-2 1.2 Z'),
+    roundel: [-9, -0.4, 2.1],
+    extras: [{ p: P2('M0 -5.5 L2 -5.6 L1.6 -5.1 L0.2 -5.1 Z'), f: 'white', layer: 'mid' },
+             { p: P2('M8 -2.6 h1 v0.8 h-1 Z M9.6 -2.7 h1 v0.8 h-1 Z M11.2 -2.8 h1 v0.8 h-1 Z'), f: 'char', layer: 'mid' },
+             { p: P2('M-20.4 -6.2 L-19 -6.2 L-18.6 -2 L-20.2 -1.9 Z'), f: 'white', layer: 'mid' },
+             { p: P2('M-2 5.2 L3 5 L2.6 6.6 L-1.6 6.6 Z'), f: 'dark', s: true, layer: 'front' }],
+    spinner: P2('M16.6 -1.8 C18.4 -1.4 19.6 -0.6 19.8 0 C19.6 0.6 18.4 1.4 16.6 1.8 Z'), noseProp: [18, 0, 8],
+    fixedGear: [[-20, 1.3, 1.2]],
+    top: 10, bottom: 8,
+    hit: [[19.8, 0], [18, -8], [16.8, -3], [5.6, -3.8], [3, -6.8], [-3.6, -3.4], [-15.5, -2.2], [-20.6, -9.6], [-22.4, -7],
+          [-22.2, -1.6], [-24.4, -0.8], [-24, 1.3], [-20, 2.5], [-9.8, 5.6], [-3, 6.6], [4, 5.2], [14, 3.2], [18, 8]] };
+  // Laser interceptor: the fighter with twin fins, canards, missiles and a red targeting pod.
+  CRAFT.interceptor = Object.assign({}, CRAFT.fighter, { bodyFill: '#7b8490', shadeFill: '#616a76',
+    wingFill: '#616a76', wingTopFill: '#7b8490', afterburner: [-24, 0.2, 1.8],
+    extras: [{ p: P2('M-22.6 -10.6 L-18.8 -10.6 L-12.6 -3.6 L-19.5 -3.4 Z'), f: 'dark', s: true, layer: 'back' }]
+      .concat(CRAFT.fighter.extras.map((e) => e.f === 'steel' || e.f === 'steelShade' ? Object.assign({}, e, { f: '#616a76' }) : e))
+      .concat([{ p: P2('M14.5 -0.6 L8.5 -0.2 L10.6 0.6 Z'), f: '#616a76', s: true, layer: 'front' },
+               { p: P2('M-9 4.4 L1.6 4.4 L2.8 5 L1.6 5.6 L-9 5.6 Z'), f: 'white', s: true, layer: 'front' },
+               { p: P2('M-9 4.4 L-10.4 3.6 L-10.4 6.4 L-9 5.6 Z'), f: 'liv', layer: 'front' },
+               { p: P2('M-4 0.1 L14 0.4 L14 0.9 L-4 0.6 Z'), f: 'liv', layer: 'front' },
+               { p: P2('M18.6 2 A0.9 0.9 0 1 1 16.8 2 A0.9 0.9 0 1 1 18.6 2 Z'), f: '#ff3b30', layer: 'front' }]),
+    bottom: 6.4,
+    hit: [[28.6, 0.7], [22.9, -1.1], [20, -1.7], [16.2, -3.4], [13.2, -4.6], [9.2, -2.8], [-8.2, -2.5], [-13.75, -4.3],
+          [-21.3, -11.8], [-25.9, -12.3], [-22.5, -3.9], [-23.9, -3.9], [-24.1, -1.5], [-24, 1.9], [-10.4, 3.6], [-10.4, 6.4],
+          [2.8, 5.6], [13.1, 3.8], [13.1, 1.6], [22.9, 2]] });
 
   // Player hangar: ten planes that unlock with your best score, in six liveries.
   const PLANES = [
@@ -1192,7 +1315,7 @@
     }
     if (sh.farWing) part(sh.farWing, col(PC.wing));
     if (sh.antenna && !sil) lines([sh.antenna], PC.win, lw);
-    part(sh.fin, col(liv));
+    if (sh.fin) part(sh.fin, col(liv));
     if (sh.finEdge && !sil) { ctx.fillStyle = dark; ctx.fill(sh.finEdge); }
     if (sh.lowerFin) part(sh.lowerFin, col(liv));
     if (sh.under) part(sh.under, col(PC.white));
@@ -1208,11 +1331,11 @@
     }
 
     // fuselage with lower shading, belly stripe and details
-    const bodyFill = sh.bodyFill === 'liv' ? liv : sh.military || sh.bodyFill === 'steel' ? PC.steel : PC.white;
+    const bodyFill = sh.bodyFill === 'liv' ? liv : sh.military || sh.bodyFill === 'steel' ? PC.steel : sh.bodyFill ? paint(sh.bodyFill) : PC.white;
     part(sh.body, col(bodyFill));
     if (!sil) {
       ctx.save(); ctx.clip(sh.body);
-      ctx.fillStyle = sh.bodyFill === 'liv' ? PC.wing : sh.military || sh.bodyFill === 'steel' ? PC.steelShade : PC.shade;
+      ctx.fillStyle = sh.shadeFill ? paint(sh.shadeFill) : sh.bodyFill === 'liv' ? PC.wing : sh.military || sh.bodyFill === 'steel' ? PC.steelShade : PC.shade;
       if (sh.shadePath) ctx.fill(sh.shadePath); else ctx.fillRect(-40, sh.shadeY, 80, 20);
       if (sh.cheatPath) { ctx.fillStyle = liv; ctx.fill(sh.cheatPath); }
       if (sh.bellyY != null) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.bellyY, 80, 20); }
@@ -1279,6 +1402,12 @@
       }
       if (sh.tailRotor && !sil) propDisc(sh.tailRotor[0], sh.tailRotor[1], sh.tailRotor[2], 40);
     }
+    if (sh.rotors && !sil) for (const [x, y, span] of sh.rotors) {
+      const k2 = Math.abs(Math.cos(t * 30 + x));
+      lines([[x, y + 1.6, x, y]], PC.win, 0.8);
+      ctx.fillStyle = 'rgba(80,88,100,0.22)'; ctx.beginPath(); ctx.ellipse(x, y, span, 0.9, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = PC.win; ctx.fillRect(x - span * k2, y - 0.35, span * 2 * k2, 0.7);
+    }
     if (sh.afterburner && !sil) {
       const [ax, ay, ah] = sh.afterburner, fl = 7 + Math.sin(t * 40) * 2.5;
       ctx.fillStyle = FLAME; ctx.beginPath(); ctx.moveTo(ax, ay - ah); ctx.lineTo(ax - fl, ay); ctx.lineTo(ax, ay + ah); ctx.closePath(); ctx.fill();
@@ -1297,20 +1426,36 @@
     ctx.restore();
   }
 
-  // Oncoming traffic: ten types, each unlocking at a score and faster or more aggressive than the last.
-  // track: how hard it steers toward your altitude; warn: seconds of edge warning before it appears.
+  // Oncoming traffic: each type joins at a score and is faster or more aggressive than the last.
+  // track: how hard it steers toward your altitude; warn: seconds of edge warning before it appears;
+  // wobbleRate: how fast it bobs. special 'laser' types lock on first and then streak straight through.
   const TRAFFIC = [
+    { id: 'balloon', unlock: 0, v: [0, 10], sc: [0.95, 1.1], track: 0, wobble: 5, wobbleRate: 0.9, gap: 1.4, warn: 0 },
     { id: 'biplane', unlock: 0, v: [25, 55], sc: [0.66, 0.74], track: 0, wobble: 6, gap: 1.15, warn: 0 },
     { id: 'blimp', unlock: 0, v: [5, 18], sc: [0.9, 1], track: 0, wobble: 3, gap: 1.4, warn: 0 },
     { id: 'cessna', unlock: 100, v: [35, 65], sc: [1.35, 1.5], track: 0, wobble: 3, gap: 1.1, warn: 0 },
+    { id: 'glider', unlock: 150, v: [15, 35], sc: [1.1, 1.2], track: 0, wobble: 4, wobbleRate: 1.2, gap: 1.1, warn: 0 },
     { id: 'helicopter', unlock: 200, v: [20, 45], sc: [1, 1.1], track: 10, wobble: 5, gap: 1.1, warn: 0 },
+    { id: 'turboprop', unlock: 250, v: [60, 95], sc: [0.82, 0.9], track: 5, wobble: 2, gap: 1, warn: 0 },
     { id: 'propliner', unlock: 300, v: [55, 95], sc: [0.9, 1], track: 6, wobble: 2, gap: 1, warn: 0 },
+    { id: 'drone', unlock: 350, v: [30, 60], sc: [1.1, 1.2], track: 18, wobble: 6, wobbleRate: 3.5, gap: 0.9, warn: 0.3 },
     { id: 'spitfire', unlock: 450, v: [110, 160], sc: [1, 1.1], track: 20, wobble: 1, gap: 0.95, warn: 0.4 },
+    { id: 'bizjet', unlock: 550, v: [110, 150], sc: [0.85, 0.92], track: 10, wobble: 0, gap: 0.95, warn: 0.4 },
     { id: 'regional', unlock: 600, v: [95, 140], sc: [0.8, 0.88], track: 12, wobble: 0, gap: 0.95, warn: 0.4 },
-    { id: 'widebody', unlock: 800, v: [100, 150], sc: [1, 1.1], track: 14, wobble: 0, gap: 0.95, warn: 0.5 },
+    { id: 'cargo', unlock: 750, v: [70, 110], sc: [0.95, 1.05], track: 8, wobble: 1, gap: 1.05, warn: 0.5 },
+    { id: 'widebody', unlock: 800, v: [100, 150], sc: [0.9, 1], track: 14, wobble: 0, gap: 0.95, warn: 0.5 },
+    { id: 'jumbo', unlock: 950, v: [100, 150], sc: [0.9, 1], track: 10, wobble: 0, gap: 1, warn: 0.5 },
     { id: 'concorde', unlock: 1000, v: [220, 280], sc: [0.9, 1], track: 8, wobble: 0, gap: 0.9, warn: 0.9 },
     { id: 'fighter', unlock: 1200, v: [190, 260], sc: [0.78, 0.86], track: 55, wobble: 0, gap: 0.8, warn: 0.9 },
+    { id: 'stealth', unlock: 1600, v: [260, 330], sc: [1.05, 1.15], track: 35, wobble: 0, gap: 0.85, warn: 0.8 },
+    { id: 'interceptor', unlock: 2000, v: [650, 750], sc: [1, 1.08], track: 0, wobble: 0, gap: 1, warn: 0, special: 'laser' },
   ];
+  const INTERCEPTOR = TRAFFIC.find((m) => m.special === 'laser');
+  // Speed steps up every 500 points; tapping a lot calls in more traffic.
+  // +30% of the starting speed per step up to 4000 points, then +10% per step until 10,000.
+  const SPEED_STEP = 500, SPEED_GAIN = 0.3, TAPS_PER_LEVEL = 60, TAP_LEVELS = 6;
+  const speedTierAt = (sc) => Math.min(20, Math.floor(sc / SPEED_STEP));
+  const speedGoalAt = (sc) => { const n = speedTierAt(sc); return baseSpeed() * (1 + SPEED_GAIN * Math.min(n, 8) + 0.1 * Math.max(0, n - 8)); };
 
   function modelPoly(m, x, y, ang, flip, sc) {
     const c = Math.cos(ang), s = Math.sin(ang);
@@ -1432,6 +1577,9 @@
     sputter: () => { tone(120, 70, 0.06, 'square', 0.03); tone(110, 60, 0.06, 'square', 0.03, 0.08); },
     point: () => { tone(880, 0, 0.07, 'square', 0.03); tone(1320, 0, 0.12, 'square', 0.03, 0.09); },
     crash: () => tone(240, 50, 0.4, 'sawtooth', 0.05),
+    lockBeep: (hi) => tone(hi ? 1760 : 1320, 0, hi ? 0.05 : 0.07, 'square', 0.025),
+    whoosh: () => tone(900, 120, 0.45, 'sawtooth', 0.035),
+    levelUp: () => { tone(520, 0, 0.08, 'square', 0.03); tone(780, 0, 0.08, 'square', 0.03, 0.09); tone(1040, 0, 0.14, 'square', 0.03, 0.18); },
   };
   function renderMute() {
     muteBtn.setAttribute('aria-pressed', String(muted));
@@ -1729,7 +1877,7 @@
   const stats = loadJSON('skyline-glide-stats', { runs: 0, total: 0, nightfalls: 0, sunrises: 0, landmarks: {}, types: {}, dailyDone: 0, dailySweeps: 0, got: {} });
   const saveStats = () => { store.set('skyline-glide-stats', JSON.stringify(stats)); queueSync(); };
   let run = null, progTimer = 0; // this flight's counters
-  const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false, forced: {} });
+  const newRun = () => ({ passed: 0, fuelOuts: 0, fuelOutAt: null, clean: 0, deadstick: false, forced: {}, taps: 0 });
   const count = (o) => Object.keys(o).length;
 
   // test(best) gets the best score so far, this run included
@@ -1746,7 +1894,8 @@
     { id: 'dodge', name: 'TRAFFIC DODGER', desc: 'Pass 25 aircraft in one run.', test: () => !!run && run.passed >= 25 },
     { id: 'blimp', name: 'BLIMP SPOTTER', desc: 'Pass a blimp.', test: () => !!stats.types.blimp },
     { id: 'topgun', name: 'TOP GUN', desc: 'Pass a fighter jet.', test: () => !!stats.types.fighter },
-    { id: 'spotter', name: 'PLANE SPOTTER', desc: 'Pass all ten kinds of oncoming aircraft.', test: () => count(stats.types) >= TRAFFIC.length },
+    { id: 'lockbreak', name: 'LOCK BREAKER', desc: 'Dodge a laser-locked interceptor.', test: () => !!stats.types.interceptor },
+    { id: 'spotter', name: 'PLANE SPOTTER', desc: 'Pass every kind of oncoming aircraft.', test: () => count(stats.types) >= TRAFFIC.length },
     { id: 'miser', name: 'EASY ON THE THROTTLE', desc: 'Score 300 without running out of fuel.', test: () => !!run && run.clean >= 300 },
     { id: 'deadstick', name: 'DEAD STICK', desc: 'Stay airborne 5 seconds after running out of fuel.', test: () => !!run && run.deadstick },
     { id: 'collector', name: 'COLLECTOR', desc: 'Unlock 5 planes.', test: () => PLANES.filter(isUnlocked).length >= 5 },
@@ -1775,7 +1924,8 @@
     return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   }
   const oneOf = (r, list) => list[Math.floor(r() * list.length)];
-  const TYPE_PLURAL = { biplane: 'BIPLANES', blimp: 'BLIMPS', cessna: 'LIGHT PLANES', helicopter: 'HELICOPTERS' };
+  const TYPE_PLURAL = { biplane: 'BIPLANES', blimp: 'BLIMPS', cessna: 'LIGHT PLANES', helicopter: 'HELICOPTERS',
+                        balloon: 'HOT-AIR BALLOONS', glider: 'GLIDERS', drone: 'DRONES' };
   const DAILY_POOL = [
     (r) => { const n = oneOf(r, [300, 400, 500, 600]); return { text: `SCORE ${n} IN ONE RUN`, target: n, metric: 'bestScore', best: true }; },
     (r) => { const n = oneOf(r, [1000, 1500, 2000]); return { text: `SCORE ${n} POINTS IN TOTAL`, target: n, metric: 'sumScore' }; },
@@ -2139,7 +2289,8 @@
 
   // ---------- game flow ----------
   function reset() {
-    clusters = []; enemies = []; puffs = []; trail = [];
+    clusters = []; enemies = []; puffs = []; trail = []; locks = [];
+    laserTimer = 2; speedTier = 0; tapLevel = 0;
     elapsed = 0; dist = 0; score = 0; lastMilestone = 0; lastHf = 0.35;
     speed = baseSpeed(); spawnCursor = W + 120; enemyTimer = 3.5;
     if (state !== 'ready') player.y = playH * 0.42;
@@ -2168,7 +2319,7 @@
   }
   function press() {
     if (state === 'ready' || (state === 'over' && overT >= 0.5)) return launch();
-    if (state === 'playing') flap();
+    if (state === 'playing') { if (run) run.taps++; flap(); }
   }
   function showHome() {
     state = 'ready';
@@ -2219,7 +2370,7 @@
   }
 
   function pickTraffic() {
-    const open = TRAFFIC.filter((m) => score >= m.unlock);
+    const open = TRAFFIC.filter((m) => score >= m.unlock && !m.special);
     return Math.random() < 0.55 ? pick(open.slice(-2)) : pick(open);
   }
   function trySpawnEnemy(diff) {
@@ -2242,8 +2393,53 @@
     const y = aim ? clamp(player.y + rand(-25, 25), yMin, yMax) : rand(yMin, yMax);
     for (const e of enemies) if (e.x > W * 0.45 && Math.abs(e.base - y) < 36) { enemyTimer = 0.5; return; }
     enemies.push({ x: ex, base: y, y, yMin, yMax, v, sc, tr, m, liv: pick(COLORS).c, seed: randi(1, 1e6) });
-    enemyTimer = (rand(2.4, 4.2) - diff * 1.2) * tr.gap;
+    enemyTimer = (rand(2.4, 4.2) - diff * 1.2) * tr.gap * trafficRate();
   }
+  // Past 2000 more traffic comes, and more again for players who tap a lot.
+  const tapPressure = () => tapLevel / TAP_LEVELS;
+  const trafficRate = () => (1 - 0.35 * tapPressure()) * (score >= 2000 ? 0.75 : 1);
+
+  // The safe altitude band for something crossing the whole screen right now.
+  function laneFor(m, sc) {
+    let minTop = groundY;
+    for (const c of clusters) {
+      if (c.x < W + 60 && c.x + c.width > -90) {
+        for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, towerTop(c, tw))) minTop = Math.min(minTop, r[1]);
+      }
+    }
+    return [20 + m.top * sc, minTop - (70 + 10 * k) - m.bottom * sc];
+  }
+  // Interceptors lock on first: a red laser follows your altitude, freezes, then the jet streaks along it.
+  function tryLock() {
+    if (locks.length) { laserTimer = 1; return; }
+    const sc = rand(INTERCEPTOR.sc[0], INTERCEPTOR.sc[1]), m = CRAFT[INTERCEPTOR.id];
+    const [yMin, yMax] = laneFor(m, sc);
+    if (yMax < yMin) { laserTimer = 0.8; return; }
+    locks.push({ t: 0, y: clamp(player.y, yMin, yMax), sc, beep: 0 });
+    const extra = Math.min(3, Math.floor((score - 2000) / 500));
+    laserTimer = (rand(5, 8) - extra * 1.1) * (1 - 0.3 * tapPressure());
+  }
+  const LOCK_TRACK = 1.0, LOCK_FIRE = 1.55;
+  function updateLocks(dt) {
+    for (const L of locks) {
+      L.t += dt;
+      const m = CRAFT[INTERCEPTOR.id], [yMin, yMax] = laneFor(m, L.sc);
+      const aim = yMax < yMin ? player.y : clamp(player.y, yMin, yMax);
+      if (L.t < LOCK_TRACK) L.y += clamp(aim - L.y, -260 * k * dt, 260 * k * dt);
+      L.beep -= dt;
+      if (L.beep <= 0) { L.beep = L.t < LOCK_TRACK ? 0.25 : 0.1; sfx.lockBeep(L.t >= LOCK_TRACK); }
+      if (L.t >= LOCK_FIRE) {
+        L.done = true;
+        if (yMax < yMin) continue; // no clear line through the towers: the jet breaks off
+        const y = clamp(L.y, yMin, yMax);
+        enemies.push({ x: W + 40, prevX: W + 40, base: y, y, yMin: y, yMax: y, v: rand(INTERCEPTOR.v[0], INTERCEPTOR.v[1]),
+                       sc: L.sc, tr: INTERCEPTOR, m, liv: '#c8402f', seed: 0, laser: true });
+        sfx.whoosh(); buzz();
+      }
+    }
+    locks = locks.filter((L) => !L.done);
+  }
+
 
   function update(dt) {
     t += dt;
@@ -2276,8 +2472,17 @@
 
     // playing
     elapsed += dt;
-    const diff = clamp(elapsed / 100, 0, 1);
-    speed = Math.min(baseSpeed() + elapsed * 3.2, portrait ? 300 : 380);
+    const tl = Math.min(TAP_LEVELS, Math.floor((run ? run.taps : 0) / TAPS_PER_LEVEL));
+    if (tl > tapLevel) { tapLevel = tl; toast('MORE TRAFFIC AHEAD'); }
+    const diff = clamp(elapsed / 100 + tapPressure() * 0.3, 0, 1);
+    const tier = speedTierAt(score);
+    if (tier > speedTier) {
+      speedTier = tier;
+      toast(`SPEED UP · ${Math.round(speedGoalAt(score) / baseSpeed() * 100)}%`); sfx.levelUp();
+    }
+    // early on the speed builds up gently, then it steps up every 500 points
+    const goal = Math.max(speedGoalAt(score), Math.min(baseSpeed() + elapsed * 3.2, speedGoalAt(score) + baseSpeed() * SPEED_GAIN * 0.6));
+    speed += clamp(goal - speed, -60 * dt, 60 * dt);
     dist += speed * dt;
     score = Math.floor(dist * 0.055);
     progTimer -= dt;
@@ -2317,20 +2522,25 @@
         : sinceLandmark >= 4 && Math.random() < 0.2 ? makeLandmark(spawnCursor, diff) : makeCluster(spawnCursor, diff);
       sinceLandmark = c.lm ? 0 : sinceLandmark + 1;
       clusters.push(c);
-      spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1);
+      // wider gaps at high speed keep some reaction time; tapping a lot tightens them
+      const roomy = Math.sqrt(Math.max(1, speed / (portrait ? 300 : 380)));
+      spawnCursor += c.width + (rand(170, 290) - diff * 30) * (portrait ? 0.9 : 1) * roomy * (1 - 0.18 * tapPressure());
     }
 
     for (const e of enemies) {
+      e.prevX = e.x;
       e.x -= (speed + e.v) * dt;
       // Aggressive models steer toward your altitude until they pass you, within their safe lane.
       if (e.tr.track && e.x > px + 20) e.base += clamp(player.y - e.base, -e.tr.track * dt, e.tr.track * dt);
       e.base = clamp(e.base, e.yMin, e.yMax);
-      e.y = e.base + Math.sin(t * 2.2 + e.seed) * e.tr.wobble;
+      e.y = e.base + Math.sin(t * (e.tr.wobbleRate || 2.2) + e.seed) * e.tr.wobble;
     }
     for (const e of enemies) if (!e.passed && e.x < px - 40) { e.passed = true; onPass(e.tr.id); }
     enemies = enemies.filter((e) => e.x > -80);
     enemyTimer -= dt;
     if (enemyTimer <= 0 && elapsed > 3) trySpawnEnemy(diff);
+    if (score >= INTERCEPTOR.unlock) { laserTimer -= dt; if (laserTimer <= 0) tryLock(); }
+    updateLocks(dt);
 
     trailTimer -= dt;
     if (trailTimer <= 0 && !fuelOut) {
@@ -2351,9 +2561,40 @@
       for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, towerTop(c, tw))) if (polyHitsRect(poly, r)) return crash();
     }
     for (const e of enemies) {
-      if (Math.abs(e.x - px) > 75 || Math.abs(e.y - player.y) > 45) continue;
-      if (polyHitsPoly(poly, modelPoly(e.m, e.x, e.y, 0, -1, e.sc))) return crash();
+      if (Math.abs(e.y - player.y) > 45) continue;
+      const from = e.prevX == null ? e.x : e.prevX, steps = Math.max(1, Math.ceil((from - e.x) / 12));
+      for (let i = 1; i <= steps; i++) {
+        const x = from + (e.x - from) * i / steps;
+        if (Math.abs(x - px) > 75) continue;
+        if (polyHitsPoly(poly, modelPoly(e.m, x, e.y, 0, -1, e.sc))) return crash();
+      }
     }
+  }
+
+  function drawLock(L) {
+    const locked = L.t >= LOCK_TRACK, on = !locked || Math.sin(t * 40) > -0.3;
+    ctx.save();
+    ctx.strokeStyle = locked ? 'rgba(255,40,40,0.9)' : 'rgba(255,60,60,0.45)';
+    ctx.lineWidth = locked ? 1.6 : 1;
+    ctx.setLineDash(locked ? [] : [6, 5]); ctx.lineDashOffset = -t * 60;
+    if (on) { ctx.beginPath(); ctx.moveTo(W, L.y); ctx.lineTo(0, L.y); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // reticle closing in on your plane
+    const r = locked ? 12 : 26 - 14 * (L.t / LOCK_TRACK);
+    ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = 1.6;
+    if (on) {
+      ctx.beginPath(); ctx.arc(px, L.y, r, 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.moveTo(px + dx * (r - 4), L.y + dy * (r - 4)); ctx.lineTo(px + dx * (r + 5), L.y + dy * (r + 5)); }
+      ctx.stroke();
+    }
+    // the jet's position marker at the right edge
+    ctx.fillStyle = '#ff3b30';
+    ctx.beginPath(); ctx.moveTo(W - 4, L.y - 8); ctx.lineTo(W - 18, L.y); ctx.lineTo(W - 4, L.y + 8); ctx.closePath(); ctx.fill();
+    ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'right';
+    if (on) ctx.fillText(locked ? 'LOCKED' : 'LOCK-ON', W - 22, L.y - 8);
+    ctx.textAlign = 'left';
+    ctx.restore();
   }
 
   function blinkScore() {
@@ -2432,8 +2673,13 @@
         }
         continue;
       }
+      if (e.laser) {
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        for (let i = 0; i < 3; i++) ctx.fillRect(e.x + 30 * e.sc, e.y - 5 + i * 5, 40 + i * 14, 1.2);
+      }
       drawCraftAt(e.m, e.x, e.y, 0, -1, e.sc, e.liv, false);
     }
+    for (const L of locks) drawLock(L);
 
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
