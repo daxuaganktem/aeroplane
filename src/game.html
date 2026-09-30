@@ -7,6 +7,7 @@
      Single deliberate look: Chrome-Dino greys that fade into a night palette as you fly. */
   :root {
     --sky: #f7f7f5;
+    --bg: #e3f2f8;
     --ink: #535353;
     --warn: #d0503c;
     --pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
@@ -17,7 +18,7 @@
   body {
     margin: 0;
     overflow: hidden;
-    background: var(--sky);
+    background: var(--bg);
     color: var(--ink);
     touch-action: none;
     user-select: none;
@@ -283,12 +284,15 @@
   };
 
   // ---------- palette (day ↔ night) ----------
-  const DAY = { sky: '#f7f7f5', ink: '#535353', mid: '#9d9d9b', t0: '#efefed', t1: '#e6e6e4', t2: '#dddddb',
-                win: '#c4c4c2', lit: '#c4c4c2', cloud: '#ffffff', cloudLine: '#c9c9c7', body: '#ffffff', wing: '#dcdcda',
-                steel: '#a7aeb6' };
-  const NIGHT = { sky: '#1d2029', ink: '#d4d4d2', mid: '#7a7f8b', t0: '#2b2f38', t1: '#31353f', t2: '#262a32',
-                  win: '#3b404b', lit: '#f2d27a', cloud: '#3a3f4b', cloudLine: '#5a5f6b', body: '#ecebe7', wing: '#a9aab0',
-                  steel: '#8d949d' };
+  // sky/skyTop: the sky gradient; panel: menu cards; t*: tower faces; tside: shaded side; tv: flickering screens
+  const DAY = { sky: '#e3f2f8', skyTop: '#a8d6ea', panel: '#f7f7f5', ground: '#ebe8df', ink: '#535353', mid: '#8c96a0',
+                t0: '#eceef0', t1: '#e2e5e8', t2: '#d8dce0', tside: '#c9ced4', trim: '#9aa1a9', lobby: '#8d949c',
+                glass: '#cfe3ee', win: '#9fb1c1', lit: '#9fb1c1', tv: '#9fb1c1', glint: '#f4fbff',
+                cloud: '#ffffff', cloudShade: '#d6e5ee', body: '#ffffff', wing: '#dcdcda', steel: '#a7aeb6' };
+  const NIGHT = { sky: '#262b3a', skyTop: '#10131a', panel: '#1d2029', ground: '#1a1c22', ink: '#d4d4d2', mid: '#7a7f8b',
+                  t0: '#2b2f38', t1: '#31353f', t2: '#262a32', tside: '#1f232a', trim: '#474d58', lobby: '#1a1d23',
+                  glass: '#f2d27a', win: '#3b404b', lit: '#f2d27a', tv: '#8fb8ff', glint: '#3b404b',
+                  cloud: '#3a3f4b', cloudShade: '#2c3039', body: '#ecebe7', wing: '#a9aab0', steel: '#8d949d' };
   const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const DAYc = {}, NIGHTc = {};
   for (const key in DAY) { DAYc[key] = hexRgb(DAY[key]); NIGHTc[key] = hexRgb(NIGHT[key]); }
@@ -302,7 +306,8 @@
       P[key] = `rgb(${Math.round(a[0] + (b[0] - a[0]) * m)},${Math.round(a[1] + (b[1] - a[1]) * m)},${Math.round(a[2] + (b[2] - a[2]) * m)})`;
     }
     const root = document.documentElement.style;
-    root.setProperty('--sky', P.sky);
+    root.setProperty('--sky', P.panel);
+    root.setProperty('--bg', P.sky);
     root.setProperty('--ink', P.ink);
   }
   const SUN = '#f4c24a', SUN_LINE = '#dca12a', MOON = '#ebe6d2', FLAME = '#f39a2b', FLAME_CORE = '#ffe08a';
@@ -344,6 +349,7 @@
   // ---------- towers ----------
   const SHAPES = ['block', 'stepped', 'spire', 'antenna', 'dome', 'slant', 'crown', 'block'];
   const ornUnit = (hB) => Math.min(22, hB * 0.15);
+  const AWNINGS = ['#c96b4a', '#4a7fa8', '#5c9a6b', '#c9a14a', '#8a6bb0'];
   function makeCluster(x, diff) {
     const n = randi(2, 4);
     let hf = rand(0.2, 0.5 + 0.14 * diff);
@@ -353,7 +359,11 @@
     let dx = 0;
     for (let i = 0; i < n; i++) {
       const w = randi(30, 54);
-      towers.push({ dx, w, shape: pick(SHAPES), shade: randi(0, 2), o: rand(0.8, 1), seed: randi(1, 1e9), style: randi(0, 2) });
+      const shape = pick(SHAPES);
+      // flat roofs sometimes carry a water tank or a billboard beside the plant room
+      const extra = shape === 'block' ? pick(['tank', 'billboard', 'none']) : 'none';
+      towers.push({ dx, w, shape, extra, shade: randi(0, 2), o: rand(0.8, 1), seed: randi(1, 1e9), style: randi(0, 3),
+                    awning: pick(AWNINGS), beacon: hf > 0.42 || Math.random() < 0.3 });
       dx += w + randi(0, 3);
     }
     return { x, hf, towers, width: dx };
@@ -361,7 +371,7 @@
 
   function towerRects(tw, x, y0) {
     const w = tw.w, cx = x + w / 2, oH = ornUnit(groundY - y0) * tw.o;
-    const r = [[x, y0, w, groundY - y0]];
+    const r = [[x - 1.5, y0 - 1, w + 3, groundY - y0 + 1]];
     switch (tw.shape) {
       case 'block': r.push([x + w * 0.55, y0 - oH * 0.35, w * 0.28, oH * 0.35]); break;
       case 'stepped': r.push([x + w * 0.17, y0 - oH * 0.5, w * 0.66, oH * 0.5], [x + w * 0.32, y0 - oH, w * 0.36, oH * 0.5]); break;
@@ -372,7 +382,51 @@
       case 'slant': r.push([x, y0 - oH * 0.8, w * 0.3, oH * 0.8], [x, y0 - oH * 0.4, w * 0.65, oH * 0.4]); break;
       case 'crown': for (let m = 0; m < 3; m++) r.push([x + w * (0.08 + m * 0.32), y0 - oH * 0.4, w * 0.2, oH * 0.4]); break;
     }
+    if (tw.extra === 'tank') r.push([x + w * 0.1, y0 - oH * 0.95, w * 0.28, oH * 0.95]);
+    if (tw.extra === 'billboard') r.push([x + w * 0.06, y0 - oH * 1.05, w * 0.44, oH * 1.05]);
     return r;
+  }
+
+  // Windows: four facade styles. At night some flash on and off and a few flicker like TVs;
+  // by day a sheen of reflected light sweeps across the glass.
+  function drawWindows(tw, x, y0) {
+    const w = tw.w, top = y0 + 7, bottom = groundY - 15;
+    const night = nightMix > 0.05;
+    const base = new Path2D(), lit = new Path2D(), tv = new Path2D(), glint = new Path2D();
+    let cw = 3, ch = 3.6, gx = 5, gy = 6;
+    if (tw.style === 1) { cw = 4.4; ch = 2.8; gx = 5; gy = 6.5; }       // ribbon glazing
+    else if (tw.style === 2) { cw = 2.4; ch = 5.2; gx = 4.4; gy = 7.5; } // tall slits
+    else if (tw.style === 3) { cw = 3.2; ch = 4.2; gx = 4.4; gy = 7; }   // paired windows
+    const cols = Math.max(1, Math.floor((w - 6 + (gx - cw)) / gx));
+    const sx = x + (w - (cols * gx - (gx - cw))) / 2;
+    const sweep = (t * 38 + (tw.seed % 97)) % 220 - 30;
+    for (let r = 0, yy = top; yy + ch < bottom; r++, yy += gy) {
+      for (let c = 0; c < cols; c++) {
+        if (tw.style === 3 && c % 3 === 2) continue;
+        if (tw.style === 0 && hash(tw.seed, r, c) < 0.05) continue;
+        let target = base;
+        if (night) {
+          const b = hash(tw.seed, r, c + 211);
+          if (b < 0.06) target = ((t * 0.8 + b * 60) | 0) % 2 ? lit : base;                 // switching on and off
+          else if (b < 0.09) target = hash(tw.seed, r, c + ((t * 6) | 0)) < 0.5 ? tv : lit; // TV flicker
+          else if (hash(tw.seed, r, c + 97) < 0.45) target = lit;
+        } else {
+          const d = c * gx + r * gy * 0.55 - sweep;
+          if (d > -3 && d < 5) target = glint;
+          else if (hash(tw.seed, r, c + 13) < 0.06) target = glint;
+        }
+        target.rect(sx + c * gx, yy, tw.style === 3 && c % 3 === 0 ? cw + 0.8 : cw, ch);
+      }
+    }
+    ctx.fillStyle = P.win; ctx.fill(base);
+    ctx.fillStyle = P.glint; ctx.fill(glint);
+    ctx.fillStyle = P.lit; ctx.fill(lit);
+    ctx.fillStyle = P.tv; ctx.fill(tv);
+    // spandrel bands on slit facades
+    if (tw.style === 2) {
+      ctx.fillStyle = P.tside;
+      for (let yy = top - 1.5; yy < bottom; yy += gy * 3) ctx.fillRect(x + 2, yy, w - 4, 1);
+    }
   }
 
   function drawTower(tw, x, y0) {
@@ -381,73 +435,93 @@
     ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.strokeStyle = P.ink; ctx.fillStyle = fill;
 
+    // rooftop extras
+    if (tw.extra === 'tank') {
+      const tx = x + w * 0.1, tw2 = w * 0.28;
+      ctx.beginPath();
+      ctx.moveTo(tx + 2, y0); ctx.lineTo(tx + 2, y0 - oH * 0.4);
+      ctx.moveTo(tx + tw2 - 2, y0); ctx.lineTo(tx + tw2 - 2, y0 - oH * 0.4);
+      ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.rect(tx, y0 - oH * 0.8, tw2, oH * 0.4); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tx - 0.5, y0 - oH * 0.8); ctx.lineTo(tx + tw2 / 2, y0 - oH * 0.95); ctx.lineTo(tx + tw2 + 0.5, y0 - oH * 0.8); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.4;
+    } else if (tw.extra === 'billboard') {
+      const bx = x + w * 0.06, bw = w * 0.44, top = y0 - oH * 1.05, bh = oH * 0.6;
+      ctx.beginPath(); ctx.moveTo(bx + bw * 0.25, y0); ctx.lineTo(bx + bw * 0.25, top + bh); ctx.moveTo(bx + bw * 0.75, y0); ctx.lineTo(bx + bw * 0.75, top + bh);
+      ctx.lineWidth = 1; ctx.stroke(); ctx.lineWidth = 1.4;
+      ctx.fillStyle = nightMix > 0.4 ? P.lit : P.glint;
+      ctx.beginPath(); ctx.rect(bx, top, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = tw.awning; ctx.fillRect(bx + 2, top + bh * 0.3, bw * 0.55, bh * 0.4);
+      ctx.fillStyle = P.trim; ctx.fillRect(bx + bw * 0.65, top + bh * 0.3, bw * 0.25, bh * 0.4);
+      ctx.fillStyle = fill;
+    }
+
+    // rooftop ornament, drawn first so the body's roof edge sits over it
     ctx.beginPath();
     let beacon = null;
     switch (tw.shape) {
       case 'block': ctx.rect(x + w * 0.55, y0 - oH * 0.35, w * 0.28, oH * 0.35); break;
-      case 'stepped': ctx.rect(x + w * 0.17, y0 - oH * 0.5, w * 0.66, oH * 0.5); ctx.rect(x + w * 0.32, y0 - oH, w * 0.36, oH * 0.5); break;
+      case 'stepped': ctx.rect(x + w * 0.17, y0 - oH * 0.5, w * 0.66, oH * 0.5); ctx.rect(x + w * 0.32, y0 - oH, w * 0.36, oH * 0.5); beacon = [cx, y0 - oH]; break;
       case 'spire':
         ctx.moveTo(x + w * 0.2, y0); ctx.lineTo(cx, y0 - oH * 0.8); ctx.lineTo(x + w * 0.8, y0); ctx.closePath();
-        break;
+        beacon = [cx, y0 - oH * 1.5]; break;
       case 'antenna': ctx.rect(x + w * 0.35, y0 - 4, w * 0.3, 4); beacon = [cx, y0 - oH * 1.6]; break;
       case 'dome': { const rx = w * 0.38, ry = Math.min(oH, rx);
-        ctx.ellipse(cx, y0, rx, ry, 0, Math.PI, TAU); ctx.closePath(); break; }
-      case 'slant': ctx.moveTo(x, y0); ctx.lineTo(x, y0 - oH * 0.8); ctx.lineTo(x + w, y0); ctx.closePath(); break;
+        ctx.ellipse(cx, y0, rx, ry, 0, Math.PI, TAU); ctx.closePath(); beacon = [cx, y0 - ry - 5]; break; }
+      case 'slant': ctx.moveTo(x, y0); ctx.lineTo(x, y0 - oH * 0.8); ctx.lineTo(x + w, y0); ctx.closePath(); beacon = [x + 1, y0 - oH * 0.8]; break;
       case 'crown': for (let m = 0; m < 3; m++) ctx.rect(x + w * (0.08 + m * 0.32), y0 - oH * 0.4, w * 0.2, oH * 0.4); break;
     }
     ctx.fill(); ctx.stroke();
     if (tw.shape === 'spire') { ctx.beginPath(); ctx.moveTo(cx, y0 - oH * 0.8); ctx.lineTo(cx, y0 - oH * 1.5); ctx.stroke(); }
-    if (tw.shape === 'dome') { const ry = Math.min(oH, w * 0.38); ctx.beginPath(); ctx.moveTo(cx, y0 - ry); ctx.lineTo(cx, y0 - ry - 5); ctx.stroke(); }
-    if (beacon) {
-      ctx.beginPath(); ctx.moveTo(cx, y0 - 4); ctx.lineTo(cx, beacon[1]);
-      ctx.moveTo(cx - 4, y0 - oH * 1.1); ctx.lineTo(cx + 4, y0 - oH * 1.1); ctx.stroke();
+    if (tw.shape === 'dome') {
+      const ry = Math.min(oH, w * 0.38);
+      ctx.beginPath(); ctx.moveTo(cx, y0 - ry); ctx.lineTo(cx, y0 - ry - 5); ctx.stroke();
+      // dome ribs
+      ctx.beginPath(); ctx.ellipse(cx, y0, w * 0.18, ry, 0, Math.PI, TAU); ctx.lineWidth = 0.7; ctx.stroke(); ctx.lineWidth = 1.4;
+    }
+    if (tw.shape === 'antenna') {
+      ctx.beginPath(); ctx.moveTo(cx, y0 - 4); ctx.lineTo(cx, y0 - oH * 1.6);
+      ctx.moveTo(cx - 4, y0 - oH * 1.1); ctx.lineTo(cx + 4, y0 - oH * 1.1);
+      ctx.moveTo(cx - 2.5, y0 - oH * 1.35); ctx.lineTo(cx + 2.5, y0 - oH * 1.35); ctx.stroke();
+    }
+    if (tw.shape === 'block' || tw.shape === 'crown') {
+      // plant-room louvres and a roof railing
+      if (tw.shape === 'block') { ctx.fillStyle = P.tside; for (let i = 1; i < 4; i++) ctx.fillRect(x + w * 0.58, y0 - oH * 0.35 + i * oH * 0.08, w * 0.22, 0.7); }
+      ctx.beginPath(); ctx.moveTo(x + 1, y0 - 3); ctx.lineTo(x + w - 1, y0 - 3); ctx.lineWidth = 0.6; ctx.stroke(); ctx.lineWidth = 1.4;
     }
 
-    ctx.fillStyle = fill;
-    ctx.beginPath(); ctx.rect(x, y0, w, hB); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x, y0 + 3.5); ctx.lineTo(x + w, y0 + 3.5); ctx.lineWidth = 0.8; ctx.stroke();
+    // body with a shaded side for depth
+    ctx.fillStyle = fill; ctx.fillRect(x, y0, w, hB);
+    ctx.fillStyle = P.tside; ctx.fillRect(x + w * 0.82, y0, w * 0.18, hB);
+    drawWindows(tw, x, y0);
+    // corner pilasters
+    ctx.fillStyle = P.tside; ctx.fillRect(x, y0, 1.6, hB);
+    ctx.strokeStyle = P.ink; ctx.beginPath(); ctx.rect(x, y0, w, hB); ctx.stroke();
+    // cornice
+    ctx.fillStyle = P.trim; ctx.beginPath(); ctx.rect(x - 1.5, y0 - 1, w + 3, 3); ctx.fill(); ctx.lineWidth = 0.9; ctx.stroke();
 
-    const night = nightMix > 0.02;
-    for (let pass = 0; pass < (night ? 2 : 1); pass++) {
-      ctx.fillStyle = pass ? P.lit : P.win;
-      if (tw.style === 0) {
-        const cols = Math.max(1, Math.floor((w - 8) / 7));
-        const sx = x + (w - (cols * 7 - 3.5)) / 2;
-        for (let r = 0, yy = y0 + 8; yy < groundY - 12; r++, yy += 8) {
-          for (let c = 0; c < cols; c++) {
-            if (hash(tw.seed, r, c) < 0.1) continue;
-            const lit = night && hash(tw.seed, r, c + 97) < 0.5;
-            if (lit !== !!pass) continue;
-            ctx.fillRect(sx + c * 7, yy, 3.5, 4);
-          }
-        }
-      } else if (tw.style === 1) {
-        const segs = Math.max(1, Math.floor((w - 8) / 6));
-        const sw = (w - 8) / segs;
-        for (let r = 0, yy = y0 + 8; yy < groundY - 12; r++, yy += 9) {
-          for (let c = 0; c < segs; c++) {
-            const lit = night && hash(tw.seed, r, c + 31) < 0.45;
-            if (lit !== !!pass) continue;
-            ctx.fillRect(x + 4 + c * sw, yy, sw + 0.3, 3);
-          }
-        }
+    // lobby: dark base, glass doors, awning
+    const lh = 11;
+    ctx.fillStyle = P.lobby; ctx.fillRect(x + 0.7, groundY - lh, w - 1.4, lh);
+    ctx.fillStyle = P.glass;
+    ctx.fillRect(cx - 4.5, groundY - 7.5, 4, 7.5); ctx.fillRect(cx + 0.5, groundY - 7.5, 4, 7.5);
+    for (let lx = x + 3; lx < cx - 7; lx += 5) ctx.fillRect(lx, groundY - 8, 3, 5);
+    for (let lx = cx + 7; lx < x + w - 5; lx += 5) ctx.fillRect(lx, groundY - 8, 3, 5);
+    ctx.fillStyle = tw.awning;
+    ctx.beginPath(); ctx.moveTo(cx - 8, groundY - lh); ctx.lineTo(cx + 8, groundY - lh); ctx.lineTo(cx + 9.5, groundY - lh + 3.5); ctx.lineTo(cx - 9.5, groundY - lh + 3.5); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 0.9; ctx.stroke(); ctx.lineWidth = 1.4;
+
+    // aviation beacon: a red double-flash, day and night
+    if (tw.beacon) {
+      const [bx, by] = beacon || [x + w - 3, y0 - 1];
+      const ph = (t * 0.9 + (tw.seed % 10) / 10) % 1;
+      if (ph < 0.08 || (ph > 0.16 && ph < 0.24)) {
+        ctx.fillStyle = 'rgba(240,70,50,0.35)'; ctx.beginPath(); ctx.arc(bx, by, 4, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#f04632'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, TAU); ctx.fill();
       } else {
-        const cols = Math.max(1, Math.floor((w - 6) / 7));
-        const sx = x + (w - (cols * 7 - 4)) / 2;
-        for (let c = 0; c < cols; c++) {
-          for (let r = 0, yy = y0 + 7; yy < groundY - 12; r++, yy += 9) {
-            const lit = night && hash(tw.seed, r, c + 53) < 0.4;
-            if (lit !== !!pass) continue;
-            ctx.fillRect(sx + c * 7, yy, 4, Math.min(9, groundY - 12 - yy));
-          }
-        }
+        ctx.fillStyle = '#a3372a'; ctx.beginPath(); ctx.arc(bx, by, 1.2, 0, TAU); ctx.fill();
       }
-    }
-    ctx.fillStyle = P.win;
-    ctx.fillRect(cx - 4, groundY - 8, 8, 8);
-    if (beacon && Math.sin(t * 5 + tw.seed) > 0) {
-      ctx.fillStyle = '#e0412f';
-      ctx.beginPath(); ctx.arc(beacon[0], beacon[1], 1.8, 0, TAU); ctx.fill();
     }
   }
 
@@ -723,168 +797,162 @@
   };
   if (!isUnlocked(choice.plane)) choice.plane = PLANES[0];
 
-  // Each sprite is a grid of art pixels. L/D/E/O take the livery; '.' is empty.
-  // ps is the size of one art pixel in world units; (ax, ay) is the pivot.
-  const SPRITES = {
-    airliner: { ax: 22, ay: 12.5, ps: 1.25,
-      rows: [
-        '.DLL........................................',
-        '.DLLL.......................................',
-        '.DLLLL......................................',
-        '.DLLLLL.....................................',
-        '.DLLLLLL....................................',
-        '..DLLLLLL...................................',
-        '..DLLLLLLL..................................',
-        '..DLLLLLLLLL................................',
-        '..DLLLLLLLLLLL........AAAAA..K..............',
-        '..DLLLLLLLLLLLLWWWWWWWWWWWWWWWWWWWWW........',
-        '.WWWWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWOOOWW.....',
-        'AAAAAAAAWOWOWKWKWKWKWKWKWKWKWKWKWKOWOWCCW...',
-        '..GGGGGGGOWOWWWWWWWWWWWWWWWWWWWWWWOWOWWWWW..',
-        '....WWWWWOOOWWWWWWWWWWWWWWWWWWWWWWOOOWWWWWW.',
-        '.......SSSSSSSSSSSSSSSSSSSWWWWWWWWSSSSSSSSSS',
-        '..........LLLLLLLLLLLLAAAAAAAAAAGLLLLLLLLL..',
-        '.............LLLLLLAAAAAAAAAGEEEEEDLLL......',
-        '................AAAAAAAAAG...EEEEED.........',
-        '..............GGGGGGGG........EEEE..........',
-      ],
-      gear: [[22, 18, 'K'], [22, 19, 'K'], [24, 18, 'K'], [24, 19, 'K'], [38, 16, 'K'], [38, 17, 'K'], [38, 18, 'K'], [38, 19, 'K'], [21, 20, 'T'], [22, 20, 'T'], [24, 20, 'T'], [25, 20, 'T'], [37, 20, 'T'], [38, 20, 'T'], [39, 20, 'T'], [21, 21, 'T'], [22, 21, 'T'], [24, 21, 'T'], [25, 21, 'T'], [37, 21, 'T'], [38, 21, 'T'], [39, 21, 'T']] },
-    turboprop: { ax: 18, ay: 10, ps: 1.35,
-      rows: [
-        'LLLLLLL.................................',
-        '..LLLLL.................................',
-        '...LLLLL................................',
-        '...LLLLLL........................P......',
-        '....LLLLLL.......................P......',
-        '....LLLLLLL.............EEEEEEEEDP......',
-        '.....LLLLLLL...AAAAAAAAAEEEEEEEEDP......',
-        '.....LLLLLLLLLWWWWWWWWWWWWWWWWWWWP......',
-        '....WWWWWWWWWWWWWWWWWWWWWWWWWWWWWPWW....',
-        '...WWWWWKWKWKWKWKWKWKWKWKWKWKWKWWPCCW...',
-        '....WWWWWWWWWWWWWWWWWWWWWWWWWWWWWPWWW...',
-        '......SSSSSSSSSSSSSSSSSSSSSSSSSSSPSS....',
-        '........LLLLLLLLLLLLLLLLLLLLLLLLLLL.....',
-        '...........LLLLLLGGGGGGGLLLLLLLL........',
-      ],
-      gear: [[20, 14, 'K'], [20, 15, 'K'], [31, 13, 'K'], [31, 14, 'K'], [31, 15, 'K'], [19, 16, 'T'], [20, 16, 'T'], [21, 16, 'T'], [30, 16, 'T'], [31, 16, 'T'], [32, 16, 'T'], [19, 17, 'T'], [20, 17, 'T'], [21, 17, 'T'], [30, 17, 'T'], [31, 17, 'T'], [32, 17, 'T']] },
-    bizjet: { ax: 17, ay: 8.5, ps: 1.35,
-      rows: [
-        'LLLLLL............................',
-        '.LLLL.............................',
-        '..LLLL............................',
-        '..LLLLL...........................',
-        '...LLLLEEEEEED....................',
-        '...LLLLEEEEEED....................',
-        '...LLLLLLWWWWWWWWWWWWWWWWWWWW.....',
-        '..WWWWWWWWWWWWWWWWWWWWWWWWWWWWW...',
-        '..WWWWWWWWWKWKWKWKWKWKWWWWWCCWWW..',
-        '...WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW.',
-        '.....SSSSSSSSGGGGGGGSSSSSSSSSSS...',
-        '........LLLAAAAAAAALLLLLLLLLL.....',
-        '..........GGGGG...................',
-      ],
-      gear: [[17, 12, 'K'], [17, 13, 'K'], [28, 12, 'K'], [28, 13, 'K'], [16, 14, 'T'], [17, 14, 'T'], [18, 14, 'T'], [27, 14, 'T'], [28, 14, 'T'], [29, 14, 'T'], [16, 15, 'T'], [17, 15, 'T'], [18, 15, 'T'], [27, 15, 'T'], [28, 15, 'T'], [29, 15, 'T']] },
-    jumbo: { ax: 26, ay: 12.5, ps: 1.15,
-      rows: [
-        '.LLLL...............................................',
-        '.LLLLL..............................................',
-        '.LLLLLL.............................................',
-        '.LLLLLLL............................................',
-        '..LLLLLLL...........................................',
-        '..LLLLLLLL..........................................',
-        '..LLLLLLLLL.......................WWWWWWWW..........',
-        '..LLLLLLLLLLL..................WWWWWWWWWWWWWW.......',
-        '..LLLLLLLLLLLLL.............WWWKWKWKWKWKWWWWCCW.....',
-        '..DLLLLLLLLLLLLLLWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW....',
-        '.WWWWWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOOOWWWWW..',
-        'GGGGGGGGGWOWOWKWKWKWKWKWKWKWKWKWKWKWKWKWKWOWOWWWWWW.',
-        '..GGGGGGGGOWOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOWOWWWWWWW',
-        '....WWWWWWOOOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWOOOWWWWWWW',
-        '.......SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS.',
-        '.........LLLLLLLLLLLLLGGGGGGGGGGLLLLLLLLLLLLLLLLL...',
-        '............LLLLLLAAAAAAAAAAAAEEEEEELLLLLLLLLL......',
-        '...............AAAAAAAAAAAAA..EEEEEED...............',
-        '..............GGGEEEEED.......EEEEEE................',
-        '.................EEEEED.............................',
-      ],
-      gear: [[27, 18, 'K'], [27, 19, 'K'], [27, 20, 'K'], [45, 17, 'K'], [45, 18, 'K'], [45, 19, 'K'], [45, 20, 'K'], [25, 21, 'T'], [26, 21, 'T'], [27, 21, 'T'], [28, 21, 'T'], [29, 21, 'T'], [44, 21, 'T'], [45, 21, 'T'], [46, 21, 'T'], [25, 22, 'T'], [26, 22, 'T'], [27, 22, 'T'], [28, 22, 'T'], [29, 22, 'T'], [44, 22, 'T'], [45, 22, 'T'], [46, 22, 'T']] },
-    fighter: { ax: 18, ay: 6.5, ps: 1.3,
-      rows: [
-        '..LLL...............................',
-        '..LLLL..............................',
-        '...LLLL.............................',
-        '...LLLLL............................',
-        '....LLLLL...........CCCC............',
-        '....LLLLLLMMMMMMMMMCCCCCCMMM........',
-        'FFYMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...',
-        '.FYMMMMMMMMMMMMKKKMMMMMMMMMMMMMMMMM.',
-        '...SSSSSAAAAAAAAAAAAASSSSSSSSS......',
-        '......GGGGGGGGGGGGGG................',
-        '.....GGGGG..........................',
-      ],
-      gear: [[16, 10, 'K'], [28, 9, 'K'], [28, 10, 'K'], [15, 11, 'T'], [16, 11, 'T'], [17, 11, 'T'], [27, 11, 'T'], [28, 11, 'T'], [29, 11, 'T'], [15, 12, 'T'], [16, 12, 'T'], [17, 12, 'T'], [27, 12, 'T'], [28, 12, 'T'], [29, 12, 'T']] },
-  };
-  const PIX = { W: '#ffffff', S: '#dde2e8', A: '#eef1f5', G: '#b7bec7', K: '#3b4049', C: '#26314d', T: '#2a2a2a',
-                M: '#a7aeb6', F: '#f39a2b', Y: '#ffe08a', P: 'rgba(120,126,136,0.55)' };
+  // Player planes, drawn in the reference style: flat colour, a soft outline, a tall livery tail
+  // with a darker trailing edge, grey lower fuselage, belly stripe, outlined doors and a livery engine.
+  // Coordinates are local units with the nose pointing +x; hit lists the crash outline.
+  const PC = { white: '#ffffff', shade: '#dde3ea', wing: '#eef2f6', wingShade: '#c3cad3', win: '#4a5160',
+               cockpit: '#27324f', out: '#8e98a5', tyre: '#2a2a2a', steel: '#b3bbc4', steelShade: '#939ca6' };
   const darken = (hex, f) => { const [r, g, b] = hexRgb(hex); return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`; };
-  for (const sp of Object.values(SPRITES)) {
-    sp.w = sp.rows[0].length; sp.h = sp.rows.length;
-    // solid pixels (the prop blur doesn't count) and their outline, for pixel-accurate collisions
-    sp.solid = sp.rows.map((r) => [...r].map((ch) => ch !== '.' && ch !== 'P'));
-    const on = (x, y) => y >= 0 && y < sp.h && x >= 0 && x < sp.w && sp.solid[y][x];
-    sp.edge = [];
-    for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) {
-      if (on(x, y) && !(on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1))) sp.edge.push([(x + 0.5 - sp.ax) * sp.ps, (y + 0.5 - sp.ay) * sp.ps]);
+  const P2 = (d) => new Path2D(d);
+  const PLAYER_SHAPES = {
+    airliner: { sc: 0.92,
+      farWing: P2('M-3 -4.8 L-9 -8.6 L-5 -8.9 L4 -4.8 Z'), antenna: [5, -5, 6.2, -7.8],
+      fin: P2('M-13 -5 C-18 -5.6 -22 -9.5 -24.5 -21 L-28.8 -21.5 L-28.6 -5 Z'),
+      finEdge: P2('M-28.8 -21.5 L-26.9 -21.4 L-26.5 -5 L-28.6 -5 Z'),
+      body: P2('M-29 -4.8 L19 -5 C25 -5 29 -2.5 30 1.5 C30 4 27 5.5 21 5.5 L-12 5.5 C-18 5.5 -24 2 -30.5 -2 Z'),
+      shadeY: 1.8, bellyY: 3.9,
+      windows: [{ x0: -13.2, x1: 16, step: 2.9, y: -2.4, w: 1.5, h: 1.7 }],
+      doors: [[-17.8, -3.7, 2.6, 5.4], [17.6, -3.7, 2.6, 5.4]],
+      cockpit: P2('M23.4 -3.4 L27.2 -2.5 L28.9 -0.5 L24 -0.7 Z'),
+      tailplane: P2('M-20.5 -1.2 L-31.8 -4.4 L-32.6 -2.1 L-24 1.3 Z'),
+      wing: P2('M8.5 3 L-7 11.8 L-12.3 11.8 L-2 3 Z'), wingTop: P2('M8.5 3 L-6.3 10.8 L-9.6 10.8 L0.6 3 Z'),
+      engines: [[1, 6.6, 11, 4.6]],
+      gear: [[-1.2, 5.5], [1.8, 5.5], [22.5, 5.5]],
+      top: 22, bottom: 12,
+      hit: [[30, 1.5], [25, -4.6], [-13, -5], [-24.5, -21], [-28.8, -21.5], [-28.7, -6], [-32.6, -2.1], [-24, 1.3],
+            [-17, 4.8], [-12.3, 11.8], [-7, 11.8], [1, 11.2], [12, 11.2], [12, 6], [21, 5.5]] },
+    turboprop: { sc: 1,
+      fin: P2('M-14 -4.5 L-20 -16 L-24 -16 L-24 -4.5 Z'), finEdge: P2('M-24 -16 L-22.4 -16 L-22.3 -4.5 L-24 -4.5 Z'),
+      tailplane: P2('M-18 -16.2 L-28 -17.8 L-28.5 -15.4 L-19.5 -14.4 Z'),
+      under: P2('M-5.5 3.4 L5.5 3.4 L5 6.2 L-5 6.2 Z'),
+      body: P2('M-25 -4.5 L14 -4.5 C21 -4.5 25.5 -1.5 26 1 C25.5 3.5 21 4.5 14 4.5 L-12 4.5 C-17 4.5 -21 2 -25.5 -1 Z'),
+      shadeY: 1.4, bellyY: 3.1,
+      windows: [{ x0: -15, x1: 11.5, step: 3.4, y: -2.6, w: 1.7, h: 1.9 }],
+      doors: [[-19.2, -3.4, 2.4, 4.8], [14.2, -3.4, 2.4, 4.8]],
+      cockpit: P2('M18 -3.5 L22 -2.5 L23.7 -0.6 L18.5 -0.8 Z'),
+      highWing: P2('M-9 -6.9 L10 -6.9 L10 -4.5 L-9 -4.5 Z'),
+      nacelles: [[1, -9.2, 12.5, 5]], props: [[14.8, -6.7, 8.5]],
+      gear: [[0, 6], [2.5, 6], [19.5, 4.5]],
+      top: 18, bottom: 7,
+      hit: [[26, 1], [20, -4.5], [15, -4.5], [15, -15], [14, -15], [1, -9.2], [-9, -6.9], [-14, -4.5], [-20, -16],
+            [-28, -17.8], [-28.5, -15.4], [-25, -4.5], [-25.5, -1], [-12, 4.5], [-5.5, 6.2], [5.5, 6.2], [20, 4.5]] },
+    bizjet: { sc: 1,
+      fin: P2('M-11.5 -3.8 L-17 -14 L-21 -14 L-21 -3.5 Z'), finEdge: P2('M-21 -14 L-19.5 -14 L-19.4 -3.6 L-21 -3.5 Z'),
+      tailplane: P2('M-15.5 -14.2 L-25 -16 L-25.5 -13.5 L-17 -12.6 Z'),
+      body: P2('M-22 -3.5 L12 -4 C18 -4 22 -1.5 22.5 1 C22 3 18 4 12 4 L-10 4 C-15 4 -19 1.5 -22.5 -0.5 Z'),
+      shadeY: 1.2, bellyY: 2.7,
+      ovals: { x0: -4, x1: 10, step: 3.4, y: -1.6 },
+      doors: [[12.4, -3.3, 2.2, 4.3]],
+      cockpit: P2('M15.5 -3.3 L19 -2.5 L20.6 -0.8 L16 -1 Z'),
+      wing: P2('M3 2 L-6 8 L-9.6 8 L-5 2 Z'), wingTop: P2('M3 2 L-5.5 7.3 L-7.8 7.3 L-2.8 2 Z'),
+      rearEngines: [[-15, -8, 10, 3.9]],
+      gear: [[-2.5, 4], [16, 4]],
+      top: 16.5, bottom: 8.5,
+      hit: [[22.5, 1], [16, -3.8], [-5, -4], [-5, -8], [-15, -8], [-17, -14], [-25, -16], [-25.5, -13.5], [-21, -3.5],
+            [-22.5, -0.5], [-10, 4], [-9.6, 8], [-6, 8], [3, 4]] },
+    jumbo: { sc: 0.85,
+      farWing: P2('M-1 -5.5 L-8 -9.6 L-4 -9.9 L6 -5.5 Z'),
+      fin: P2('M-19 -5.5 C-23 -6.5 -25.5 -11 -27.5 -20.5 L-32.3 -20.8 L-31.8 -5.5 Z'),
+      finEdge: P2('M-32.3 -20.8 L-30.4 -20.7 L-30 -5.5 L-31.8 -5.5 Z'),
+      body: P2('M-32 -5.5 L4 -5.5 C10 -5.5 12 -9.5 20 -9.5 C28 -9.5 33 -3 33 1 C33 4.5 29 5.5 22 5.5 L-16 5.5 C-22 5.5 -27 2 -33 -1.5 Z'),
+      shadeY: 2, bellyY: 4,
+      windows: [{ x0: -16.5, x1: 21, step: 2.8, y: -2.9, w: 1.4, h: 1.7 }, { x0: 12.5, x1: 22.5, step: 2.8, y: -7.4, w: 1.4, h: 1.5 }],
+      doors: [[-20.6, -4, 2.6, 5.6], [23.2, -4, 2.6, 5.6]],
+      cockpit: P2('M25 -8.2 L28.6 -7.1 L30.2 -5.2 L25.5 -5.6 Z'),
+      tailplane: P2('M-23 -2 L-34 -6 L-35 -3.5 L-26 0.8 Z'),
+      wing: P2('M9 2.5 L-7 12.5 L-12.5 12.5 L-1 2.5 Z'), wingTop: P2('M9 2.5 L-6.3 11.6 L-10 11.6 L0.6 2.5 Z'),
+      engines: [[-6, 10.5, 9, 4.2], [3, 7, 10.5, 4.4]],
+      gear: [[-3, 5.5], [0, 5.5], [3, 5.5], [25, 5.5]],
+      top: 21, bottom: 15,
+      hit: [[33, 1], [27, -8], [20, -9.5], [8, -6], [-19, -5.5], [-27.5, -20.5], [-32.3, -20.8], [-31.8, -5.5], [-35, -3.5],
+            [-30, -1], [-16, 5.5], [-12.5, 12.5], [-6, 14.7], [3, 14.7], [13.5, 11.4], [22, 5.5]] },
+    fighter: { sc: 1, military: true,
+      fin: P2('M-9 -3.5 L-17.5 -13 L-21 -13 L-20 -3.5 Z'), finEdge: P2('M-21 -13 L-19.5 -13 L-18.7 -3.5 L-20 -3.5 Z'),
+      body: P2('M25 0.5 L12 -3 L-14 -3.8 L-20 -3 L-20 3 L6 3.2 Z'),
+      shadeY: 1, bellyY: null,
+      canopy: P2('M14 -2.8 Q8 -7.8 1 -3.4 Z'),
+      tailplane: P2('M-14 0.5 L-23.5 3.8 L-20 0.5 Z'),
+      wing: P2('M4 1.5 L-13 7.5 L-18.5 7.5 L-17 1.5 Z'), wingTop: P2('M4 1.5 L-12.5 6.6 L-15.5 6.6 L-13 1.5 Z'),
+      gear: [[-6, 3], [12, 2.5]],
+      top: 13.5, bottom: 8,
+      hit: [[25, 0.5], [12, -3.5], [7, -6.5], [-9, -4], [-17.5, -12.5], [-20.5, -12.5], [-20, -3], [-20, 3],
+            [-18, 7], [-13, 7], [4, 3]] },
+  };
+  const playerShape = () => PLAYER_SHAPES[choice.plane.id];
+
+  // Draws a player plane at the current transform. liv null draws a locked silhouette.
+  function drawPlayerPlane(sh, liv, gear, sc) {
+    const sil = !liv;
+    const lw = 0.9 / sc;
+    const SIL = 'rgba(96,104,116,0.35)';
+    const col = (c) => (sil ? SIL : c);
+    const dark = sil ? SIL : darken(liv, 0.72);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = lw;
+    ctx.strokeStyle = sil ? 'rgba(0,0,0,0)' : PC.out;
+    const part = (path, fill) => { ctx.fillStyle = fill; ctx.fill(path); ctx.stroke(path); };
+    const rr = (x, y, w, h) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2); else ctx.rect(x, y, w, h); };
+
+    if (gear && sh.gear) {
+      for (const [gx, gy] of sh.gear) {
+        ctx.fillStyle = col(PC.win); ctx.fillRect(gx - 0.45, gy, 0.9, 5.5);
+        ctx.fillStyle = col(PC.tyre); ctx.beginPath(); ctx.arc(gx, gy + 6.4, 1.9, 0, TAU); ctx.fill();
+      }
     }
-    sp.top = sp.ay * sp.ps; sp.bottom = (sp.h - sp.ay) * sp.ps;
+    if (sh.farWing) part(sh.farWing, col(PC.wing));
+    if (sh.antenna && !sil) { const [a, b, c, d] = sh.antenna; ctx.strokeStyle = PC.win; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); ctx.strokeStyle = PC.out; }
+    part(sh.fin, col(liv));
+    if (!sil) { ctx.fillStyle = dark; ctx.fill(sh.finEdge); }
+    if (sh.under) part(sh.under, col(PC.shade));
+    if (sh.rearEngines) {
+      ctx.strokeStyle = sil ? 'rgba(0,0,0,0)' : PC.out;
+      for (const [x, y, w, h] of sh.rearEngines) { rr(x, y, w, h); ctx.fillStyle = col(liv); ctx.fill(); ctx.stroke(); if (!sil) { ctx.fillStyle = dark; ctx.fillRect(x + w - 1.1, y + 0.7, 1, h - 1.4); } }
+    }
+
+    // fuselage with lower shading and belly stripe
+    part(sh.body, col(sh.military ? PC.steel : PC.white));
+    if (!sil) {
+      ctx.save(); ctx.clip(sh.body);
+      ctx.fillStyle = sh.military ? PC.steelShade : PC.shade; ctx.fillRect(-40, sh.shadeY, 80, 20);
+      if (sh.bellyY != null) { ctx.fillStyle = liv; ctx.fillRect(-40, sh.bellyY, 80, 20); }
+      ctx.restore();
+      ctx.stroke(sh.body);
+      ctx.fillStyle = PC.win;
+      for (const wr of sh.windows || []) for (let x = wr.x0; x <= wr.x1; x += wr.step) ctx.fillRect(x, wr.y, wr.w, wr.h);
+      if (sh.ovals) for (let x = sh.ovals.x0; x <= sh.ovals.x1; x += sh.ovals.step) { ctx.beginPath(); ctx.ellipse(x, sh.ovals.y, 0.9, 1.15, 0, 0, TAU); ctx.fill(); }
+      ctx.strokeStyle = liv; ctx.lineWidth = 0.75;
+      for (const [x, y, w, h] of sh.doors || []) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 0.8); else ctx.rect(x, y, w, h); ctx.stroke(); }
+      ctx.lineWidth = lw; ctx.strokeStyle = PC.out;
+      if (sh.cockpit) { ctx.fillStyle = PC.cockpit; ctx.fill(sh.cockpit); }
+      if (sh.canopy) {
+        ctx.fillStyle = PC.cockpit; ctx.fill(sh.canopy);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(9, -4.6, 2.6, 0.7, -0.2, 0, TAU); ctx.fill();
+        ctx.fillStyle = liv; ctx.fillRect(-12, -0.4, 16, 1.3);
+        ctx.fillStyle = PC.win; ctx.fillRect(-1, -1.2, 6, 2.6);
+      }
+    }
+    if (sh.tailplane) part(sh.tailplane, col(PC.wing));
+    if (sh.highWing) part(sh.highWing, col(PC.wing));
+    if (sh.wing) {
+      part(sh.wing, col(sh.military ? PC.steelShade : PC.wingShade));
+      if (!sil) { ctx.fillStyle = sh.military ? PC.steel : PC.wing; ctx.fill(sh.wingTop); }
+      if (!sil && sh.military) { ctx.fillStyle = liv; ctx.fillRect(-10, 2.3, 6, 1.3); }
+    }
+    for (const [x, y, w, h] of (sh.engines || []).concat(sh.nacelles || [])) {
+      rr(x, y, w, h); ctx.fillStyle = col(liv); ctx.fill(); ctx.stroke();
+      if (!sil) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + 2, y + 0.8, w - 4, 0.9); ctx.fillStyle = dark; ctx.fillRect(x + w - 1.2, y + 0.7, 1, h - 1.4); }
+    }
+    if (sh.props && !sil) for (const [x, y, r] of sh.props) propDisc(x, y, r, 34);
+    if (sh.military && !sil) {
+      const fl = 7 + Math.sin(t * 40) * 2.5;
+      ctx.fillStyle = FLAME; ctx.beginPath(); ctx.moveTo(-20, -2.3); ctx.lineTo(-20 - fl, 0); ctx.lineTo(-20, 2.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = FLAME_CORE; ctx.beginPath(); ctx.moveTo(-20, -1.2); ctx.lineTo(-20 - fl * 0.55, 0); ctx.lineTo(-20, 1.2); ctx.closePath(); ctx.fill();
+    }
   }
-  const spriteCache = new Map();
-  function spriteCanvas(id, hex, gear, frame) {
-    const key = `${id}|${hex}|${gear ? 1 : 0}|${frame}`;
-    let c = spriteCache.get(key);
-    if (c) return c;
-    const sp = SPRITES[id];
-    const grid = sp.rows.map((r) => [...r]);
-    if (gear) for (const [x, y, ch] of sp.gear) { while (grid.length <= y) grid.push(Array(sp.w).fill('.')); grid[y][x] = ch; }
-    let pal = Object.assign({}, PIX, hex ? { L: hex, E: hex, O: hex, D: darken(hex, 0.7) } : {});
-    if (frame) Object.assign(pal, { P: 'rgba(120,126,136,0.25)', F: PIX.Y, Y: PIX.F });
-    // no livery means a locked plane: draw a flat silhouette
-    if (!hex) pal = new Proxy({}, { get: () => 'rgba(120,126,136,0.45)' });
-    c = document.createElement('canvas');
-    c.width = sp.w; c.height = grid.length;
-    const g = c.getContext('2d');
-    grid.forEach((r, y) => r.forEach((ch, x) => { if (ch !== '.') { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
-    spriteCache.set(key, c);
-    return c;
-  }
-  function drawSprite(id, x, y, ang, scale, hex, gear) {
-    const sp = SPRITES[id], c = spriteCanvas(id, hex, gear, Math.floor(t * 16) % 2);
-    const ps = sp.ps * scale;
+  function drawPlayerAt(id, x, y, ang, sc, liv, gear) {
     ctx.save();
-    ctx.translate(x, y); ctx.rotate(ang);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(c, -sp.ax * ps, -sp.ay * ps, c.width * ps, c.height * ps);
+    ctx.translate(x, y); ctx.rotate(ang); ctx.scale(sc, sc);
+    drawPlayerPlane(PLAYER_SHAPES[id], liv, gear, sc);
     ctx.restore();
-  }
-  const playerSprite = () => SPRITES[choice.plane.id];
-  function playerEdge() {
-    const c = Math.cos(player.angle), s = Math.sin(player.angle);
-    return playerSprite().edge.map(([lx, ly]) => [px + lx * c - ly * s, player.y + lx * s + ly * c]);
-  }
-  // Is a world point inside one of the player's solid pixels?
-  function playerCovers(wx, wy) {
-    const sp = playerSprite(), c = Math.cos(-player.angle), s = Math.sin(-player.angle);
-    const dx = wx - px, dy = wy - player.y;
-    const gx = Math.floor((dx * c - dy * s) / sp.ps + sp.ax), gy = Math.floor((dx * s + dy * c) / sp.ps + sp.ay);
-    return gy >= 0 && gy < sp.h && gx >= 0 && gx < sp.w && sp.solid[gy][gx];
-  }
-  function pointInPoly(x, y, poly) {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [xi, yi] = poly[i], [xj, yj] = poly[j];
-      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-    }
-    return inside;
   }
 
   // Oncoming traffic by era: each unlocks at a score and is faster and more aggressive than the last.
@@ -947,34 +1015,31 @@
 
   // ---------- scenery ----------
   function makeCloud(x, near) {
-    const wv = rand(46, 84);
-    const n = randi(3, 5);
+    const wv = rand(44, 80);
+    const n = randi(4, 6);
     const blobs = [];
     for (let i = 0; i < n; i++) {
-      const f = n === 1 ? 0.5 : i / (n - 1);
-      const r = (0.55 + Math.sin(f * Math.PI) * 0.6) * rand(9, 13);
-      blobs.push({ x: -wv / 2 + f * wv, y: -r * 0.55, r });
+      const f = i / (n - 1), arch = Math.sin(f * Math.PI);
+      const r = (0.55 + arch * 0.75) * rand(8.5, 11);
+      blobs.push({ x: -wv / 2 + f * wv, y: -r * 0.45 - arch * 4, r });
     }
     return { x, y: rand(playH * 0.08, playH * (near ? 0.5 : 0.4)), s: near ? rand(0.95, 1.35) : rand(0.55, 0.8), near, blobs, wv };
+  }
+  // Solid two-tone clouds: puffs on a rounded base, a shaded underside, flat along the bottom.
+  function cloudPath(c, dy) {
+    ctx.beginPath();
+    for (const b of c.blobs) { ctx.moveTo(b.x + b.r, b.y + dy); ctx.arc(b.x, b.y + dy, b.r, 0, TAU); }
+    const h = 10;
+    if (ctx.roundRect) ctx.roundRect(-c.wv / 2 - 4, -h + dy, c.wv + 8, h + 6, h / 2); else ctx.rect(-c.wv / 2 - 4, -h + dy, c.wv + 8, h + 6);
   }
   function drawCloud(c) {
     ctx.save();
     ctx.translate(c.x, c.y); ctx.scale(c.s, c.s);
+    if (!c.near) ctx.globalAlpha = 0.85;
     ctx.beginPath(); ctx.rect(-200, -200, 400, 200); ctx.clip();
-    ctx.beginPath();
-    for (const b of c.blobs) { ctx.moveTo(b.x + b.r, b.y); ctx.arc(b.x, b.y, b.r, 0, TAU); }
-    ctx.lineWidth = 2.6 / c.s; ctx.strokeStyle = P.cloudLine;
-    ctx.fillStyle = P.cloud;
-    ctx.stroke(); ctx.fill();
+    cloudPath(c, 0); ctx.fillStyle = P.cloudShade; ctx.fill('nonzero');
+    cloudPath(c, -3.2); ctx.fillStyle = P.cloud; ctx.fill('nonzero');
     ctx.restore();
-    let lo = Infinity, hiX = -Infinity;
-    for (const b of c.blobs) {
-      const d = Math.sqrt(Math.max(0, b.r * b.r - b.y * b.y));
-      lo = Math.min(lo, b.x - d); hiX = Math.max(hiX, b.x + d);
-    }
-    ctx.beginPath();
-    ctx.moveTo(c.x + lo * c.s, c.y); ctx.lineTo(c.x + hiX * c.s, c.y);
-    ctx.lineWidth = 1.3; ctx.strokeStyle = P.cloudLine; ctx.stroke();
   }
   function makeFlock(x) {
     const n = randi(3, 6), birds = [];
@@ -1272,17 +1337,17 @@
     const w = pv.clientWidth, h = pv.clientHeight;
     if (!w || !h) return;
     if (pv.width !== Math.round(w * dpr) || pv.height !== Math.round(h * dpr)) { pv.width = Math.round(w * dpr); pv.height = Math.round(h * dpr); }
-    const view = PLANES[viewIdx], sp = SPRITES[view.id], gh = sp.h + 4;
-    // whole device pixels per art pixel keeps the preview crisp
-    const art = Math.max(1, Math.floor(Math.min(w * dpr * 0.8 / sp.w, h * dpr * 0.92 / gh)));
+    const view = PLANES[viewIdx], sh = PLAYER_SHAPES[view.id];
+    const tall = sh.top + sh.bottom + 7;
+    const sc = Math.min(w * 0.85 / 70, h * 0.95 / tall);
     ctx = pctx;
-    pctx.setTransform(1, 0, 0, 1, 0, 0);
-    pctx.clearRect(0, 0, pv.width, pv.height);
-    const x = Math.round((pv.width - sp.w * art) / 2 + sp.ax * art);
-    const y = Math.round((pv.height - gh * art) / 2 + sp.ay * art + Math.round(Math.sin(t * 2.4) * 1.5) * art / 2);
-    drawSprite(view.id, x, y, 0, art / sp.ps, isUnlocked(view) ? choice.color.c : null, true);
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pctx.clearRect(0, 0, w, h);
+    const y = (h - tall * sc) / 2 + sh.top * sc + Math.sin(t * 2.4) * 1.5;
+    drawPlayerAt(view.id, w / 2, y, 0, sc, isUnlocked(view) ? choice.color.c : null, true);
     ctx = mainCtx;
   }
+
 
 
   // ---------- game flow ----------
@@ -1467,21 +1532,17 @@
     if (score >= nextToggle) { nightTarget = 1 - nightTarget; nextToggle += DAY_CYCLE; }
 
     // collisions
-    // The player's outline pixels against towers, ground and traffic, so hits match what you see.
-    const edge = playerEdge();
-    for (const p of edge) if (p[1] >= groundY) return crash();
+    const sh = playerShape();
+    const poly = modelPoly(sh, px, player.y, player.angle, 1, sh.sc);
+    for (const p of poly) if (p[1] >= groundY) return crash();
     for (const c of clusters) {
       if (c.x > px + 50 || c.x + c.width < px - 50) continue;
       const y0 = groundY - c.hf * playH;
-      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) {
-        for (const p of edge) if (p[0] >= r[0] && p[0] <= r[0] + r[2] && p[1] >= r[1] && p[1] <= r[1] + r[3]) return crash();
-      }
+      for (const tw of c.towers) for (const r of towerRects(tw, c.x + tw.dx, y0)) if (polyHitsRect(poly, r)) return crash();
     }
     for (const e of enemies) {
       if (Math.abs(e.x - px) > 75 || Math.abs(e.y - player.y) > 45) continue;
-      const poly = modelPoly(e.m, e.x, e.y, 0, -1, e.sc);
-      for (const p of edge) if (pointInPoly(p[0], p[1], poly)) return crash();
-      for (const q of poly) if (playerCovers(q[0], q[1])) return crash();
+      if (polyHitsPoly(poly, modelPoly(e.m, e.x, e.y, 0, -1, e.sc))) return crash();
     }
   }
 
@@ -1504,7 +1565,9 @@
 
   function draw() {
     ctx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0);
-    ctx.fillStyle = P.sky; ctx.fillRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+    sky.addColorStop(0, P.skyTop); sky.addColorStop(1, P.sky);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, groundY);
 
     if (nightMix > 0.01) {
       ctx.fillStyle = P.ink;
@@ -1532,8 +1595,11 @@
     }
     if (nightMix > 0.01) {
       ctx.globalAlpha = nightMix;
+      // crescent: the moon disc clipped away where a second disc overlaps it
+      ctx.save();
+      ctx.beginPath(); ctx.rect(sx - 30, sy - 30, 60, 60); ctx.arc(sx + 7, sy - 4, sr - 4, 0, TAU, true); ctx.clip();
       ctx.fillStyle = MOON; ctx.beginPath(); ctx.arc(sx, sy, sr - 2, 0, TAU); ctx.fill();
-      ctx.fillStyle = P.sky; ctx.beginPath(); ctx.arc(sx + 7, sy - 4, sr - 4, 0, TAU); ctx.fill();
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
 
@@ -1563,7 +1629,7 @@
     ctx.fillStyle = P.mid;
     for (const s of trail) { ctx.globalAlpha = s.a; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
     ctx.globalAlpha = 1;
-    drawSprite(choice.plane.id, px, player.y, player.angle, 1, choice.color.c, false);
+    drawPlayerAt(choice.plane.id, px, player.y, player.angle, playerShape().sc, choice.color.c, false);
 
     for (const p of puffs) {
       ctx.globalAlpha = Math.max(0, p.life);
@@ -1572,7 +1638,7 @@
     }
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = P.sky; ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.fillStyle = P.ground; ctx.fillRect(0, groundY, W, H - groundY);
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.4; ctx.lineCap = 'butt';
     ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
     ctx.fillStyle = P.ink;
